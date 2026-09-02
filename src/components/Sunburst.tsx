@@ -1,14 +1,5 @@
-"use client";
-
-import { motion } from "motion/react";
-
-/** Fills its parent; wrap in a positioned/sized element. */
+/** Fills its parent; wrap in a positioned/sized element. Pure CSS
+ *  rotation — runs on the compositor thread, no JS animation loop. */
 export function Sunburst() {
-  return (
-    <motion.div
-      animate={{ rotate: 360 }}
-      transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-      className="bg-sunburst h-full w-full"
-    />
-  );
+  return <div className="bg-sunburst animate-spin-slow h-full w-full" />;
 }

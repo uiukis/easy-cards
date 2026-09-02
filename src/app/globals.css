@@ -104,6 +104,32 @@ body {
   opacity: 0.28;
 }
 
+/* CSS-driven animations run on the compositor thread instead of JS's
+   rAF loop, which keeps scroll smooth even with several of these
+   running off-screen at once (Framer's `animate: {repeat: Infinity}`
+   was the source of a noticeable FPS drop). */
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin-slow {
+  animation: spin-slow 50s linear infinite;
+}
+
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.animate-float {
+  animation: float-y 4.5s ease-in-out infinite;
+}
+
 .clip-ticket {
   clip-path: polygon(
     0% 6%,
