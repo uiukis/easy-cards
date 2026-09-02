@@ -1,26 +1,123 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #fbf1df;
+  --surface: #ffffff;
+  --surface-alt: #fff3dd;
+  --ink: #1c1710;
+  --ink-muted: #786d59;
+  --line: rgba(28, 23, 16, 0.14);
+  --halftone-dot: rgba(28, 23, 16, 0.08);
+
+  --orange: #f2941d;
+  --orange-deep: #d9660b;
+  --orange-light: #ffb347;
+  --cream: #fbe3a6;
+  --blue: #2f6fed;
+  --blue-dark: #16305c;
+  --yellow: #ffd447;
+  --teal: #2f8f7f;
+}
+
+:root[data-theme="dark"] {
+  --bg: #100d0c;
+  --surface: #1b1613;
+  --surface-alt: #261e18;
+  --ink: #f6efe3;
+  --ink-muted: #a89a89;
+  --line: rgba(255, 255, 255, 0.09);
+  --halftone-dot: rgba(255, 255, 255, 0.05);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+
+  --color-orange: var(--orange);
+  --color-orange-deep: var(--orange-deep);
+  --color-orange-light: var(--orange-light);
+  --color-cream: var(--cream);
+  --color-blue: var(--blue);
+  --color-blue-dark: var(--blue-dark);
+  --color-yellow: var(--yellow);
+  --color-teal: var(--teal);
+
+  --font-display: var(--font-luckiest);
+  --font-comic: var(--font-bangers);
+  --font-sans: var(--font-inter);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+::selection {
+  background: var(--yellow);
+  color: #14140f;
+}
+
+.text-outline-ink {
+  -webkit-text-stroke: 2px var(--blue-dark);
+  paint-order: stroke fill;
+}
+
+.text-comic-shadow {
+  text-shadow: 3px 3px 0 var(--blue-dark);
+}
+
+.text-comic-shadow-sm {
+  text-shadow: 1.5px 1.5px 0 var(--blue-dark);
+}
+
+/* halftone dot texture, used as a subtle background layer */
+.bg-halftone {
+  background-image: radial-gradient(var(--halftone-dot) 1.4px, transparent 1.4px);
+  background-size: 16px 16px;
+}
+
+/* comic sunburst rays, centered */
+.bg-sunburst {
+  background-image: repeating-conic-gradient(
+    from 0deg,
+    var(--orange-light) 0deg 8deg,
+    transparent 8deg 20deg
+  );
+  -webkit-mask-image: radial-gradient(closest-side, black 55%, transparent 100%);
+  mask-image: radial-gradient(closest-side, black 55%, transparent 100%);
+  opacity: 0.35;
+}
+
+:root[data-theme="dark"] .bg-sunburst {
+  opacity: 0.28;
+}
+
+.clip-ticket {
+  clip-path: polygon(
+    0% 6%,
+    94% 0%,
+    100% 8%,
+    100% 94%,
+    6% 100%,
+    0% 92%
+  );
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  scrollbar-width: none;
 }
