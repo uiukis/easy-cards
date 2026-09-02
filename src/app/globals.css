@@ -20,13 +20,13 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #100d0c;
-  --surface: #1b1613;
-  --surface-alt: #261e18;
+  --bg: #241a11;
+  --surface: #33261a;
+  --surface-alt: #3d2d1e;
   --ink: #f6efe3;
-  --ink-muted: #a89a89;
+  --ink-muted: #c2a992;
   --line: rgba(255, 255, 255, 0.09);
-  --halftone-dot: rgba(255, 255, 255, 0.05);
+  --halftone-dot: rgba(255, 255, 255, 0.06);
 }
 
 @theme inline {
