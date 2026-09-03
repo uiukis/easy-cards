@@ -27,13 +27,23 @@ async function query(path: string, params: Record<string, string>) {
 export type PeriodStats = { label: string; visitors: number; pageviews: number };
 
 const SUMMARY_PERIODS = [
-  { label: "Últimas 24h", days: 1 },
+  { label: "Hoje", days: 1 },
   { label: "Últimos 7 dias", days: 7 },
   { label: "Últimos 30 dias", days: 30 },
 ];
 
+// The visits/count endpoint floors `until` to the start of its UTC day, so
+// passing "now" silently excludes today's data. Using the start of tomorrow
+// as `until` keeps the current day inside the range.
+function tomorrowUTC(): Date {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
 export async function getSummary(): Promise<PeriodStats[]> {
-  const until = new Date();
+  const until = tomorrowUTC();
   const results = await Promise.all(
     SUMMARY_PERIODS.map((p) => {
       const since = new Date(until.getTime() - p.days * 24 * 60 * 60 * 1000);
@@ -53,7 +63,7 @@ export async function getSummary(): Promise<PeriodStats[]> {
 export type DailyPoint = { date: string; visitors: number; pageviews: number };
 
 export async function getDailySeries(days = 30): Promise<DailyPoint[]> {
-  const until = new Date();
+  const until = tomorrowUTC();
   const since = new Date(until.getTime() - days * 24 * 60 * 60 * 1000);
   const res = await query("visits/aggregate", {
     since: since.toISOString(),
@@ -80,7 +90,7 @@ export async function getDailySeries(days = 30): Promise<DailyPoint[]> {
   }
 
   const points: DailyPoint[] = [];
-  for (let i = days - 1; i >= 0; i--) {
+  for (let i = days; i >= 1; i--) {
     const d = new Date(until.getTime() - i * 24 * 60 * 60 * 1000);
     const key = d.toISOString().slice(0, 10);
     points.push(byDate.get(key) ?? { date: key, visitors: 0, pageviews: 0 });
@@ -104,7 +114,7 @@ export async function getBreakdown(
   days = 30,
   limit = 6
 ): Promise<BreakdownRow[]> {
-  const until = new Date();
+  const until = tomorrowUTC();
   const since = new Date(until.getTime() - days * 24 * 60 * 60 * 1000);
   const res = await query("visits/aggregate", {
     since: since.toISOString(),
