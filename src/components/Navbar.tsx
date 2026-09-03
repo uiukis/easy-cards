@@ -2,16 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "motion/react";
 import { SITE } from "@/lib/site";
 import { WhatsAppIcon } from "./icons";
 import { ThemeToggle } from "./ThemeToggle";
 
 const LINKS = [
-  { href: "#sobre", label: "Sobre" },
-  { href: "#eventos", label: "Eventos" },
-  { href: "#leiloes", label: "Leilões" },
-  { href: "#comunidade", label: "Comunidade" },
+  { href: "/#sobre", label: "Sobre" },
+  { href: "/evento", label: "Evento" },
+  { href: "/#leiloes", label: "Leilões" },
+  { href: "/#comunidade", label: "Comunidade" },
 ];
 
 export function Navbar() {
@@ -26,15 +27,15 @@ export function Navbar() {
 
   return (
     <motion.header
-      initial={{ y: -80, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-      className={`fixed top-0 z-40 w-full transition-all duration-300 ${
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+      className={`sticky top-0 z-40 w-full transition-all duration-300 ${
         scrolled ? "bg-surface/90 backdrop-blur-md shadow-sm shadow-black/5" : "bg-transparent"
       }`}
     >
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 sm:px-8">
-        <a href="#top" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <Image
             src="/brand/icon-square.png"
             alt="Easy Cards"
@@ -45,17 +46,17 @@ export function Navbar() {
           <span className="text-comic-shadow-sm font-display text-lg tracking-wide text-orange-deep sm:text-xl">
             EASY <span className="text-orange">CARDS</span>
           </span>
-        </a>
+        </Link>
 
         <div className="hidden items-center gap-7 md:flex">
           {LINKS.map((link) => (
-            <a
+            <Link
               key={link.href}
               href={link.href}
               className="text-sm font-semibold text-ink-muted transition-colors hover:text-ink"
             >
               {link.label}
-            </a>
+            </Link>
           ))}
         </div>
 

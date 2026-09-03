@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "motion/react";
+import { ArrowRight } from "lucide-react";
 import { SITE } from "@/lib/site";
 import { Sunburst } from "./Sunburst";
-import { InstagramIcon, WhatsAppIcon } from "./icons";
+import { WhatsAppIcon } from "./icons";
 import { randomCardImageUrls } from "@/lib/tcg-cards";
 
 const BG_CARD_SLOTS = [
@@ -66,23 +68,21 @@ export function SupportSection() {
               conversar sobre parceria?
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href="/apoiador"
+                className="flex items-center justify-center gap-2 rounded-full bg-blue-dark px-6 py-3 text-sm font-bold text-cream transition-transform hover:scale-105 active:scale-95"
+              >
+                Ver como funciona
+                <ArrowRight className="h-4 w-4" />
+              </Link>
               <a
                 href={SITE.whatsappGroup}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-full bg-blue-dark px-6 py-3 text-sm font-bold text-cream transition-transform hover:scale-105 active:scale-95"
+                className="flex items-center justify-center gap-2 rounded-full border-2 border-blue-dark px-6 py-3 text-sm font-bold text-blue-dark transition-transform hover:scale-105 hover:bg-cream/40 active:scale-95"
               >
                 <WhatsAppIcon className="h-4 w-4" />
                 Quero ser apoiador
-              </a>
-              <a
-                href={SITE.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-full border-2 border-blue-dark px-6 py-3 text-sm font-bold text-blue-dark transition-transform hover:scale-105 hover:bg-cream/40 active:scale-95"
-              >
-                <InstagramIcon className="h-4 w-4" />
-                Chamar no direct
               </a>
             </div>
           </motion.div>

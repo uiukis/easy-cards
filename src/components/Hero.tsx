@@ -51,7 +51,7 @@ export function Hero() {
   }, []);
 
   return (
-    <section id="top" className="relative overflow-hidden pt-28 pb-16 sm:pt-36">
+    <section id="top" className="relative overflow-hidden pt-16 pb-16 sm:pt-20">
       {/* full-bleed animated comic background: rays behind everything, dots on top */}
       <motion.div
         initial={{ opacity: 0, scale: 0.4 }}

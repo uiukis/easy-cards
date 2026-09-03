@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Luckiest_Guy, Bangers, Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { themeInitScript } from "@/lib/theme-store";
 
@@ -21,6 +22,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://easycardstcg.vercel.app"),
   title: "Easy Cards — Compra, Venda e Troca de Cards Pokémon",
   description:
     "Easy Cards é a comunidade de colecionadores de cards Pokémon: compra, venda, troca, eventos, oficinas e leilões. Entre no grupo do WhatsApp e faça parte.",
@@ -52,6 +54,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col bg-bg text-ink font-sans">
         {children}
+        <Analytics />
       </body>
     </html>
   );

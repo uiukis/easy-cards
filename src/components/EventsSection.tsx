@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { SITE } from "@/lib/site";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { SITE, NEXT_EVENT } from "@/lib/site";
 import { Sunburst } from "./Sunburst";
-import { WhatsAppIcon, InstagramIcon } from "./icons";
+import { InstagramIcon } from "./icons";
 import { randomCardImageUrls } from "@/lib/tcg-cards";
 
 const BG_CARD_SLOTS = [
@@ -33,7 +35,7 @@ export function EventsSection() {
           className="mb-12 max-w-xl"
         >
           <span className="font-comic text-sm tracking-wide text-teal">
-            ★ De vez em quando rola evento
+            ★ Primeiro evento presencial
           </span>
           <h2 className="mt-3 font-display text-4xl leading-[1.02] text-ink sm:text-5xl">
             NUNCA JOGOU?
@@ -79,24 +81,22 @@ export function EventsSection() {
                 JOGAR DO ZERO
               </h3>
               <p className="mt-5 max-w-sm text-sm font-medium text-blue-dark/90">
-                Regras, deck building e as primeiras partidas guiadas —
-                sem pressão, no seu ritmo. Não é toda hora que rola, mas
-                quando acontece o convite sai primeiro no grupo.
+                Regras, decks de treino e as primeiras partidas guiadas —
+                sem pressão, no seu ritmo. {NEXT_EVENT.date}, no{" "}
+                {NEXT_EVENT.place}.
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href={SITE.whatsappGroup}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/evento"
                   className="flex items-center justify-center gap-2 rounded-full bg-blue-dark px-6 py-3 text-sm font-bold text-cream transition-transform hover:scale-105 active:scale-95"
                 >
-                  <WhatsAppIcon className="h-4 w-4" />
-                  Avisa quando tiver a próxima
-                </a>
+                  Saiba mais sobre o evento
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
               <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-blue-dark/70">
-                Sem data fixa — fica de olho nos avisos do grupo
+                {NEXT_EVENT.tag} · vagas limitadas
               </p>
             </div>
           </motion.div>
@@ -115,28 +115,39 @@ export function EventsSection() {
               <ul className="mt-4 space-y-3 text-sm text-ink-muted">
                 <li className="flex gap-2">
                   <span className="font-display text-orange-deep">01</span>
-                  Você avisa que quer participar direto no grupo.
+                  Lista de inscritos com prioridade + mesa extra pra quem
+                  chegar no dia.
                 </li>
                 <li className="flex gap-2">
                   <span className="font-display text-orange-deep">02</span>
-                  A gente combina local e horário com quem confirmou.
+                  Teoria e prática em rodadas, com decks de treino da Easy
+                  Cards.
                 </li>
                 <li className="flex gap-2">
                   <span className="font-display text-orange-deep">03</span>
-                  Leva seu deck (ou pede um emprestado) e joga sua
-                  primeira partida com apoio de quem já manja.
+                  Educativo, sem competição — depois é só jogo livre e
+                  sorteio.
                 </li>
               </ul>
             </div>
-            <a
-              href={SITE.instagram}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-full border-2 border-ink/15 px-6 py-3 text-sm font-bold text-ink transition-transform hover:scale-105 hover:bg-surface-alt active:scale-95"
-            >
-              <InstagramIcon className="h-4 w-4" />
-              Ver recap dos eventos passados
-            </a>
+            <div className="flex flex-col gap-3">
+              <Link
+                href="/evento"
+                className="flex items-center justify-center gap-2 rounded-full border-2 border-ink/15 px-6 py-3 text-sm font-bold text-ink transition-transform hover:scale-105 hover:bg-surface-alt active:scale-95"
+              >
+                Ver a dinâmica completa
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              <a
+                href={SITE.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 text-xs font-semibold text-ink-muted transition-colors hover:text-ink"
+              >
+                <InstagramIcon className="h-3.5 w-3.5" />
+                Ver recap dos eventos passados
+              </a>
+            </div>
           </motion.div>
         </div>
       </div>
