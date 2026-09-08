@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+// Liga Pokémon blocks non-Brazilian IPs at the Cloudflare level (works
+// fine from a BR IP, returns nothing from anywhere else) -- see
+// vercel.json, which pins this whole project to the São Paulo region.
+
 // Liga Pokémon doesn't have a public API, so this scrapes their card
 // detail page (?view=cards/card&card=<Name>) -- it's server-rendered
 // HTML with no JS required, listing every printing of a card with its
