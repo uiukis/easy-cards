@@ -1,11 +1,22 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CreditCard, Gavel, CheckCircle2, Sparkles, Clock, TrendingUp, Plus } from "lucide-react";
+import {
+  CreditCard,
+  Gavel,
+  CheckCircle2,
+  Sparkles,
+  Clock,
+  TrendingUp,
+  Plus,
+  Megaphone,
+  Users,
+  PackageOpen,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEffectivePermissions } from "@/lib/get-permissions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Reveal } from "@/components/Reveal";
 
 const STATUS_LABEL: Record<string, string> = {
   available: "Disponível",
@@ -68,100 +79,143 @@ export default async function AdminDashboard() {
   }
 
   const stats = [
-    { label: "Disponíveis", value: available ?? 0, icon: CreditCard },
-    { label: "Em leilão", value: inAuction ?? 0, icon: Gavel },
-    { label: "Vendidas", value: sold ?? 0, icon: CheckCircle2 },
+    { label: "Disponíveis", value: available ?? 0, icon: CreditCard, color: "text-orange-deep" },
+    { label: "Em leilão", value: inAuction ?? 0, icon: Gavel, color: "text-blue-dark" },
+    { label: "Vendidas", value: sold ?? 0, icon: CheckCircle2, color: "text-teal" },
   ];
+
+  const quickActions = [
+    permissions.manage_cards && {
+      href: "/admin/cartas",
+      label: "Nova carta",
+      icon: Plus,
+      className: "bg-orange-deep text-white shadow-orange-deep/25",
+    },
+    permissions.manage_quadro && {
+      href: "/admin/quadro",
+      label: "Quadro",
+      icon: Megaphone,
+      className: "border-2 border-ink/15 bg-surface text-ink hover:bg-surface-alt",
+    },
+    permissions.manage_users && {
+      href: "/admin/usuarios",
+      label: "Usuários",
+      icon: Users,
+      className: "border-2 border-ink/15 bg-surface text-ink hover:bg-surface-alt",
+    },
+    {
+      href: "/fichario",
+      label: "Fichário",
+      icon: PackageOpen,
+      className: "border-2 border-ink/15 bg-surface text-ink hover:bg-surface-alt",
+    },
+  ].filter(Boolean) as { href: string; label: string; icon: typeof Plus; className: string }[];
 
   return (
     <div>
-      <p className="font-comic text-sm text-primary">
-        {firstName ? `E aí, ${firstName}!` : "E aí!"} <Sparkles className="inline h-4 w-4" />
-      </p>
-      <h1 className="mt-1 font-display text-3xl text-ink text-comic-shadow-sm">PAINEL</h1>
-      <p className="mt-1 text-sm text-ink-muted">Resumo do catálogo de cartas.</p>
+      <Reveal className="bg-halftone -mx-4 -mt-6 rounded-b-[2rem] px-4 pb-6 pt-2 sm:-mx-6 sm:-mt-8 sm:px-6 sm:pt-4 md:-mx-10 md:-mt-8 md:px-10">
+        <p className="font-comic text-sm text-primary">
+          {firstName ? `E aí, ${firstName}!` : "E aí!"} <Sparkles className="inline h-4 w-4" />
+        </p>
+        <h1 className="mt-1 font-display text-3xl text-ink text-comic-shadow-sm sm:text-4xl">PAINEL</h1>
+        <p className="mt-1 text-sm text-ink-muted">Resumo do catálogo de cartas.</p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        {stats.map((c) => (
-          <Card key={c.label}>
-            <CardContent>
-              <c.icon className="h-5 w-5 text-primary" />
-              <p className="mt-3 font-display text-3xl text-ink">{c.value}</p>
-              <p className="text-sm text-ink-muted">{c.label}</p>
-            </CardContent>
-          </Card>
+        {quickActions.length > 0 && (
+          <div className="mt-5 -mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+            {quickActions.map((a) => (
+              <Link
+                key={a.href}
+                href={a.href}
+                className={`flex shrink-0 items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold shadow-lg transition-transform hover:scale-105 active:scale-95 ${a.className}`}
+              >
+                <a.icon className="h-4 w-4" />
+                {a.label}
+              </Link>
+            ))}
+          </div>
+        )}
+      </Reveal>
+
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {stats.map((c, i) => (
+          <Reveal key={c.label} delay={0.05 + i * 0.06}>
+            <Card>
+              <CardContent>
+                <c.icon className={`h-5 w-5 ${c.color}`} />
+                <p className="mt-3 font-display text-3xl text-ink">{c.value}</p>
+                <p className="text-sm text-ink-muted">{c.label}</p>
+              </CardContent>
+            </Card>
+          </Reveal>
         ))}
         {permissions.view_finance && (
-          <Card>
-            <CardContent>
-              <TrendingUp className="h-5 w-5 text-teal" />
-              <p className="mt-3 font-display text-3xl text-ink">R$ {monthRevenue.toFixed(2)}</p>
-              <p className="text-sm text-ink-muted">Vendido esse mês</p>
-            </CardContent>
-          </Card>
+          <Reveal delay={0.05 + stats.length * 0.06} className="col-span-2 lg:col-span-1">
+            <Card>
+              <CardContent>
+                <TrendingUp className="h-5 w-5 text-teal" />
+                <p className="mt-3 font-display text-3xl text-ink">R$ {monthRevenue.toFixed(2)}</p>
+                <p className="text-sm text-ink-muted">Vendido esse mês</p>
+              </CardContent>
+            </Card>
+          </Reveal>
         )}
       </div>
 
-      {permissions.manage_cards && (
-        <div className="mt-6">
-          <Button render={<Link href="/admin/cartas" />} nativeButton={false}>
-            <Plus className="h-4 w-4" />
-            Nova carta
-          </Button>
-        </div>
-      )}
-
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-ink-muted" />
-              <h2 className="font-display text-sm tracking-wide text-ink">CARTAS RECENTES</h2>
-            </div>
-            {!recentCards || recentCards.length === 0 ? (
-              <p className="mt-4 text-sm text-ink-muted">Nenhuma carta cadastrada ainda.</p>
-            ) : (
-              <ul className="mt-4 space-y-3">
-                {recentCards.map((c) => (
-                  <li key={c.id} className="flex items-center gap-3">
-                    {c.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
-                      <img src={c.image_url} alt={c.name} className="h-10 w-7 rounded-sm object-cover" />
-                    ) : (
-                      <div className="h-10 w-7 rounded-sm bg-surface-alt" />
-                    )}
-                    <span className="flex-1 truncate text-sm text-ink">{c.name}</span>
-                    <Badge variant="secondary">{STATUS_LABEL[c.status] ?? c.status}</Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {permissions.view_finance && (
+        <Reveal delay={0.3}>
           <Card>
             <CardContent>
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-ink-muted" />
-                <h2 className="font-display text-sm tracking-wide text-ink">VENDAS RECENTES</h2>
+                <Clock className="h-4 w-4 text-ink-muted" />
+                <h2 className="font-display text-sm tracking-wide text-ink">CARTAS RECENTES</h2>
               </div>
-              {recentSales.length === 0 ? (
-                <p className="mt-4 text-sm text-ink-muted">Nenhuma venda registrada ainda.</p>
+              {!recentCards || recentCards.length === 0 ? (
+                <p className="mt-4 text-sm text-ink-muted">Nenhuma carta cadastrada ainda.</p>
               ) : (
                 <ul className="mt-4 space-y-3">
-                  {recentSales.map((s) => (
-                    <li key={s.id} className="flex items-center justify-between text-sm">
-                      <span className="truncate text-ink">{s.cardName}</span>
-                      <span className="shrink-0 font-semibold text-primary">
-                        R$ {Number(s.final_price ?? 0).toFixed(2)}
-                      </span>
+                  {recentCards.map((c) => (
+                    <li key={c.id} className="flex items-center gap-3">
+                      {c.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
+                        <img src={c.image_url} alt={c.name} className="h-10 w-7 rounded-sm object-cover" />
+                      ) : (
+                        <div className="h-10 w-7 rounded-sm bg-surface-alt" />
+                      )}
+                      <span className="flex-1 truncate text-sm text-ink">{c.name}</span>
+                      <Badge variant="secondary">{STATUS_LABEL[c.status] ?? c.status}</Badge>
                     </li>
                   ))}
                 </ul>
               )}
             </CardContent>
           </Card>
+        </Reveal>
+
+        {permissions.view_finance && (
+          <Reveal delay={0.36}>
+            <Card>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-ink-muted" />
+                  <h2 className="font-display text-sm tracking-wide text-ink">VENDAS RECENTES</h2>
+                </div>
+                {recentSales.length === 0 ? (
+                  <p className="mt-4 text-sm text-ink-muted">Nenhuma venda registrada ainda.</p>
+                ) : (
+                  <ul className="mt-4 space-y-3">
+                    {recentSales.map((s) => (
+                      <li key={s.id} className="flex items-center justify-between text-sm">
+                        <span className="truncate text-ink">{s.cardName}</span>
+                        <span className="shrink-0 font-semibold text-primary">
+                          R$ {Number(s.final_price ?? 0).toFixed(2)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </Reveal>
         )}
       </div>
     </div>

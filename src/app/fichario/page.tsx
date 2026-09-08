@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
-import { LogoutButton } from "@/app/admin/LogoutButton";
+import { CustomerNav } from "@/components/CustomerNav";
 import { FicharioClient } from "./FicharioClient";
 
 export default async function FicharioPage() {
@@ -21,13 +19,7 @@ export default async function FicharioPage() {
   return (
     <main className="min-h-screen bg-bg px-5 py-10 sm:px-8">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/brand/icon-square.png" alt="Easy Cards" width={32} height={32} className="rounded-full" />
-            <span className="font-display text-base tracking-wide text-ink">EASY CARDS</span>
-          </Link>
-          <LogoutButton />
-        </div>
+        <CustomerNav />
 
         <FicharioClient initial={cards ?? []} />
       </div>

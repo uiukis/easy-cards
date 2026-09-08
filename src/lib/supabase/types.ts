@@ -38,25 +38,6 @@ export type CardFinance = {
   updated_at: string;
 };
 
-export type Announcement = {
-  id: string;
-  message: string;
-  active: boolean;
-  created_at: string;
-};
-
-export type EventSettings = {
-  id: boolean;
-  title: string;
-  event_date: string | null;
-  place: string | null;
-  tag: string | null;
-  banner_enabled: boolean;
-  banner_message: string | null;
-  form_url: string | null;
-  updated_at: string;
-};
-
 export type Supporter = {
   id: string;
   name: string;

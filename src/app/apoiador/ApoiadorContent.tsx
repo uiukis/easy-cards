@@ -77,13 +77,11 @@ const LEILOES = [
 
 export function ApoiadorContent({
   supporters = [],
-  eventDate = NEXT_EVENT.date,
-  eventPlace = NEXT_EVENT.place,
 }: {
   supporters?: Supporter[];
-  eventDate?: string;
-  eventPlace?: string;
 }) {
+  const eventDate = NEXT_EVENT.date;
+  const eventPlace = NEXT_EVENT.place;
   return (
     <>
       <Navbar />

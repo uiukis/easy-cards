@@ -1,5 +1,4 @@
 import { EventBanner } from "@/components/EventBanner";
-import { AnnouncementsStrip } from "@/components/AnnouncementsStrip";
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { About } from "@/components/About";
@@ -13,43 +12,23 @@ import { Footer } from "@/components/Footer";
 import { JoinModal } from "@/components/JoinModal";
 import { PressSection } from "@/components/PressSection";
 import { createClient } from "@/lib/supabase/server";
-import { formatDatePt } from "@/lib/format";
 
 export default async function Home() {
   const supabase = await createClient();
-  const [{ data: eventSettings }, { data: announcements }, { data: pressMentions }] = await Promise.all([
-    supabase
-      .from("event_settings")
-      .select("banner_enabled, banner_message, event_date, place, tag")
-      .single(),
-    supabase
-      .from("announcements")
-      .select("*")
-      .eq("active", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("press_mentions")
-      .select("*")
-      .eq("active", true)
-      .order("published_date", { ascending: false }),
-  ]);
+  const { data: pressMentions } = await supabase
+    .from("press_mentions")
+    .select("*")
+    .eq("active", true)
+    .order("published_date", { ascending: false });
 
   return (
     <>
-      <EventBanner
-        enabled={eventSettings?.banner_enabled ?? true}
-        message={eventSettings?.banner_message}
-      />
+      <EventBanner />
       <Navbar />
       <main className="flex-1">
         <Hero />
-        <AnnouncementsStrip announcements={announcements ?? []} />
         <About />
-        <EventsSection
-          date={eventSettings?.event_date ? formatDatePt(eventSettings.event_date) : undefined}
-          place={eventSettings?.place ?? undefined}
-          tag={eventSettings?.tag ?? undefined}
-        />
+        <EventsSection />
         <PressSection mentions={pressMentions ?? []} />
         <AuctionsSection />
         <GradedShowcase />

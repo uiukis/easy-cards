@@ -14,6 +14,7 @@ const LINKS = [
   { href: "/evento", label: "Evento" },
   { href: "/#leiloes", label: "Leilões" },
   { href: "/#comunidade", label: "Comunidade" },
+  { href: "/imprensa", label: "Na mídia" },
 ];
 
 export function Navbar() {

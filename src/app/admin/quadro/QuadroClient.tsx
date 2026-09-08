@@ -1,13 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Megaphone, Handshake, Newspaper, Plus, Trash2, Loader2 } from "lucide-react";
-import type { Announcement, EventSettings, Supporter, PressMention } from "@/lib/supabase/types";
+import { Handshake, Newspaper, Plus, Trash2 } from "lucide-react";
+import type { Supporter, PressMention } from "@/lib/supabase/types";
 import {
-  updateEventSettings,
-  createAnnouncement,
-  toggleAnnouncement,
-  deleteAnnouncement,
   createSupporter,
   toggleSupporter,
   deleteSupporter,
@@ -17,8 +13,6 @@ import {
 } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -39,29 +33,19 @@ const TIER_LABEL: Record<string, string> = Object.fromEntries(
 );
 
 export function QuadroClient({
-  eventSettings,
-  initialAnnouncements,
   initialSupporters,
   initialPressMentions,
 }: {
-  eventSettings: EventSettings | null;
-  initialAnnouncements: Announcement[];
   initialSupporters: Supporter[];
   initialPressMentions: PressMention[];
 }) {
   return (
     <div>
       <h1 className="font-display text-2xl text-ink">QUADRO</h1>
-      <p className="mt-1 text-sm text-ink-muted">Evento, avisos, apoiadores e imprensa visíveis no site.</p>
+      <p className="mt-1 text-sm text-ink-muted">Apoiadores e imprensa visíveis no site.</p>
 
-      <Tabs defaultValue="evento" className="mt-6">
+      <Tabs defaultValue="apoiadores" className="mt-6">
         <TabsList>
-          <TabsTrigger value="evento">
-            <Calendar className="h-4 w-4" /> Evento
-          </TabsTrigger>
-          <TabsTrigger value="avisos">
-            <Megaphone className="h-4 w-4" /> Avisos
-          </TabsTrigger>
           <TabsTrigger value="apoiadores">
             <Handshake className="h-4 w-4" /> Apoiadores
           </TabsTrigger>
@@ -70,12 +54,6 @@ export function QuadroClient({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="evento" className="mt-4">
-          <EventoTab eventSettings={eventSettings} />
-        </TabsContent>
-        <TabsContent value="avisos" className="mt-4">
-          <AvisosTab initial={initialAnnouncements} />
-        </TabsContent>
         <TabsContent value="apoiadores" className="mt-4">
           <ApoiadoresTab initial={initialSupporters} />
         </TabsContent>
@@ -83,157 +61,6 @@ export function QuadroClient({
           <ImprensaTab initial={initialPressMentions} />
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
-
-function EventoTab({ eventSettings }: { eventSettings: EventSettings | null }) {
-  const [title, setTitle] = useState(eventSettings?.title ?? "");
-  const [eventDate, setEventDate] = useState(eventSettings?.event_date ?? "");
-  const [place, setPlace] = useState(eventSettings?.place ?? "");
-  const [tag, setTag] = useState(eventSettings?.tag ?? "");
-  const [formUrl, setFormUrl] = useState(eventSettings?.form_url ?? "");
-  const [bannerMessage, setBannerMessage] = useState(eventSettings?.banner_message ?? "");
-  const [bannerEnabled, setBannerEnabled] = useState(eventSettings?.banner_enabled ?? true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setSaved(false);
-    await updateEventSettings({
-      title,
-      event_date: eventDate,
-      place,
-      tag,
-      banner_enabled: bannerEnabled,
-      banner_message: bannerMessage,
-      form_url: formUrl,
-    });
-    setSaving(false);
-    setSaved(true);
-  }
-
-  return (
-    <Card className="max-w-md">
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Título</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Data</Label>
-              <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Local</Label>
-              <Input value={place} onChange={(e) => setPlace(e.target.value)} />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Tag</Label>
-            <Input
-              placeholder="Ex: Educativo, não competitivo"
-              value={tag}
-              onChange={(e) => setTag(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Link do formulário de inscrição</Label>
-            <Input value={formUrl} onChange={(e) => setFormUrl(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Mensagem do banner</Label>
-            <Input value={bannerMessage} onChange={(e) => setBannerMessage(e.target.value)} />
-          </div>
-          <label className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Switch checked={bannerEnabled} onCheckedChange={setBannerEnabled} />
-            Mostrar banner no site
-          </label>
-
-          <Button type="submit" disabled={saving}>
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            Salvar
-          </Button>
-          {saved && <p className="text-sm text-teal">Salvo!</p>}
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-function AvisosTab({ initial }: { initial: Announcement[] }) {
-  const [items, setItems] = useState(initial);
-  const [message, setMessage] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!message.trim()) return;
-    setSaving(true);
-    await createAnnouncement(message);
-    setItems((prev) => [
-      { id: crypto.randomUUID(), message, active: true, created_at: new Date().toISOString() },
-      ...prev,
-    ]);
-    setMessage("");
-    setSaving(false);
-  }
-
-  return (
-    <div className="max-w-lg space-y-4">
-      <form onSubmit={handleAdd} className="flex gap-2">
-        <Input
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Novo aviso..."
-          className="flex-1"
-        />
-        <Button type="submit" disabled={saving} size="icon">
-          <Plus className="h-4 w-4" />
-        </Button>
-      </form>
-
-      <ul className="space-y-2">
-        {items.map((a) => (
-          <li key={a.id}>
-            <Card>
-              <CardContent className="flex items-center justify-between gap-3">
-                <span className={`text-sm ${a.active ? "text-ink" : "text-ink-muted line-through"}`}>
-                  {a.message}
-                </span>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      await toggleAnnouncement(a.id, !a.active);
-                      setItems((prev) =>
-                        prev.map((x) => (x.id === a.id ? { ...x, active: !x.active } : x))
-                      );
-                    }}
-                  >
-                    {a.active ? "desativar" : "ativar"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={async () => {
-                      await deleteAnnouncement(a.id);
-                      setItems((prev) => prev.filter((x) => x.id !== a.id));
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

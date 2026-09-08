@@ -11,57 +11,6 @@ function refresh() {
   revalidatePath("/imprensa");
 }
 
-export type EventSettingsInput = {
-  title: string;
-  event_date: string;
-  place: string;
-  tag: string;
-  banner_enabled: boolean;
-  banner_message: string;
-  form_url: string;
-};
-
-export async function updateEventSettings(input: EventSettingsInput) {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("event_settings")
-    .update({
-      title: input.title,
-      event_date: input.event_date || null,
-      place: input.place || null,
-      tag: input.tag || null,
-      banner_enabled: input.banner_enabled,
-      banner_message: input.banner_message || null,
-      form_url: input.form_url || null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", true);
-
-  if (error) throw new Error(error.message);
-  refresh();
-}
-
-export async function createAnnouncement(message: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("announcements").insert({ message });
-  if (error) throw new Error(error.message);
-  refresh();
-}
-
-export async function toggleAnnouncement(id: string, active: boolean) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("announcements").update({ active }).eq("id", id);
-  if (error) throw new Error(error.message);
-  refresh();
-}
-
-export async function deleteAnnouncement(id: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from("announcements").delete().eq("id", id);
-  if (error) throw new Error(error.message);
-  refresh();
-}
-
 export async function createSupporter(input: {
   name: string;
   instagram: string;

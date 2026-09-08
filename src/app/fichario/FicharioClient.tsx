@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { Plus, Trash2, Loader2, BookOpen } from "lucide-react";
 import type { BinderCard } from "@/lib/supabase/types";
 import { CardSearch, type SearchResult } from "@/app/admin/cartas/CardSearch";
 import { addToBinder, removeFromBinder } from "./actions";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export function FicharioClient({ initial }: { initial: BinderCard[] }) {
@@ -59,6 +61,9 @@ export function FicharioClient({ initial }: { initial: BinderCard[] }) {
           <h1 className="flex items-center gap-2 font-display text-2xl text-ink text-comic-shadow-sm">
             <BookOpen className="h-6 w-6 text-primary" />
             MEU FICHÁRIO
+            <Badge variant="secondary" className="translate-y-px font-comic tracking-wide">
+              beta
+            </Badge>
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
             Monte sua vitrine de cartas — sua coleção, do seu jeito.
@@ -80,28 +85,40 @@ export function FicharioClient({ initial }: { initial: BinderCard[] }) {
           </Button>
         </div>
       ) : (
-        <div className="mt-8 grid grid-cols-3 gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:grid-cols-3 sm:gap-4 sm:p-8 md:grid-cols-3">
-          {cards.map((card) => (
-            <div
-              key={card.id}
-              className="group relative aspect-[5/7] overflow-hidden rounded-lg border-2 border-ink/10 bg-bg shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
-              <img src={card.image_url} alt={card.name} className="h-full w-full object-cover" />
-              <button
-                onClick={() => handleRemove(card.id)}
-                disabled={removingId === card.id}
-                aria-label={`Remover ${card.name}`}
-                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 disabled:opacity-100"
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+          className="mt-8 grid grid-cols-3 gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:grid-cols-3 sm:gap-4 sm:p-8 md:grid-cols-3"
+        >
+          <AnimatePresence initial={false}>
+            {cards.map((card, i) => (
+              <motion.div
+                key={card.id}
+                layout
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={{ duration: 0.3, delay: i < 9 ? i * 0.03 : 0 }}
+                className="group relative aspect-[5/7] overflow-hidden rounded-lg border-2 border-ink/10 bg-bg shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md"
               >
-                {removingId === card.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3.5 w-3.5" />
-                )}
-              </button>
-            </div>
-          ))}
+                {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
+                <img src={card.image_url} alt={card.name} className="h-full w-full object-cover" />
+                <button
+                  onClick={() => handleRemove(card.id)}
+                  disabled={removingId === card.id}
+                  aria-label={`Remover ${card.name}`}
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 disabled:opacity-100"
+                >
+                  {removingId === card.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
           {/* empty slots to keep the last row feeling like a real binder page */}
           {Array.from({ length: (3 - (cards.length % 3)) % 3 }).map((_, i) => (
@@ -110,7 +127,7 @@ export function FicharioClient({ initial }: { initial: BinderCard[] }) {
               className="aspect-[5/7] rounded-lg border-2 border-dashed border-ink/10"
             />
           ))}
-        </div>
+        </motion.div>
       )}
 
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>

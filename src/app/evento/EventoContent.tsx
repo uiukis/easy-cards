@@ -23,8 +23,7 @@ import { Footer } from "@/components/Footer";
 import { Sunburst } from "@/components/Sunburst";
 import { WhatsAppIcon, InstagramIcon } from "@/components/icons";
 import { SITE, NEXT_EVENT, LARA_INSTAGRAM, EVENT_FORM_URL } from "@/lib/site";
-import type { EventSettings, Supporter } from "@/lib/supabase/types";
-import { formatDatePt } from "@/lib/format";
+import type { Supporter } from "@/lib/supabase/types";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -111,17 +110,15 @@ const EQUIPE_APOIO = [
 
 
 export function EventoContent({
-  eventSettings,
   supporters = [],
 }: {
-  eventSettings?: EventSettings | null;
   supporters?: Supporter[];
 }) {
-  const title = eventSettings?.title || NEXT_EVENT.title;
-  const dateDisplay = eventSettings?.event_date ? formatDatePt(eventSettings.event_date) : NEXT_EVENT.date;
-  const place = eventSettings?.place || NEXT_EVENT.place;
-  const tag = eventSettings?.tag || NEXT_EVENT.tag;
-  const formUrl = eventSettings?.form_url || EVENT_FORM_URL;
+  const title = NEXT_EVENT.title;
+  const dateDisplay = NEXT_EVENT.date;
+  const place = NEXT_EVENT.place;
+  const tag = NEXT_EVENT.tag;
+  const formUrl = EVENT_FORM_URL;
 
   return (
     <>

@@ -10,10 +10,11 @@ export const metadata: Metadata = {
 
 export default async function EventoPage() {
   const supabase = await createClient();
-  const [{ data: eventSettings }, { data: supporters }] = await Promise.all([
-    supabase.from("event_settings").select("*").single(),
-    supabase.from("supporters").select("*").eq("active", true).order("sort_order", { ascending: true }),
-  ]);
+  const { data: supporters } = await supabase
+    .from("supporters")
+    .select("*")
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
 
-  return <EventoContent eventSettings={eventSettings} supporters={supporters ?? []} />;
+  return <EventoContent supporters={supporters ?? []} />;
 }
