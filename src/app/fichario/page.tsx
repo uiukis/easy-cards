@@ -1,14 +1,27 @@
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { CustomerNav } from "@/components/CustomerNav";
 import { BinderListClient, type BinderWithPreview } from "./BinderListClient";
+import { FicharioGate } from "./FicharioGate";
 
 export default async function FicharioListPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login?next=/fichario");
+
+  if (!user) {
+    return (
+      <>
+        <Navbar />
+        <main className="bg-halftone min-h-screen bg-bg px-5 py-14 sm:px-8">
+          <FicharioGate />
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   const [{ data: binders }, { data: cards }] = await Promise.all([
     supabase

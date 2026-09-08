@@ -52,7 +52,8 @@ export default function CadastroPage() {
       return;
     }
 
-    router.push("/portal");
+    const next = new URLSearchParams(window.location.search).get("next");
+    router.push(next && next.startsWith("/") ? next : "/portal");
     router.refresh();
   }
 
