@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -8,6 +8,7 @@ import {
   Trash2,
   Loader2,
   BookOpen,
+  BookText,
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
@@ -25,6 +26,8 @@ import {
   Minimize2,
   Rows3,
   Printer,
+  Undo2,
+  Redo2,
 } from "lucide-react";
 import type { Binder, BinderCard } from "@/lib/supabase/types";
 import { PRICES_ENABLED } from "@/lib/features";
@@ -36,6 +39,7 @@ import {
   updateGridSize,
   renameBinder,
   updateBinderDescription,
+  updatePageLabels,
   setBinderShared,
   reorderBinder,
   updateCardVariant,
@@ -166,16 +170,88 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [swapFrom, setSwapFrom] = useState<number | null>(null);
 
+  const [viewMode, setViewMode] = useState<"single" | "spread">("single");
+  const [pageLabels, setPageLabels] = useState<Record<string, string>>(
+    binder.page_labels ?? {}
+  );
+  const [editingLabelPage, setEditingLabelPage] = useState<number | null>(null);
+  const [labelDraft, setLabelDraft] = useState("");
+
+  // arrangement undo/redo — stacks of card-id orders
+  const [past, setPast] = useState<string[][]>([]);
+  const [futureOrders, setFutureOrders] = useState<string[][]>([]);
+
   const { cols, rows } = GRID_SIZES[gridSize];
   const cardsPerPage = cols * rows;
   const pages = chunk(cards, cardsPerPage);
   const totalPages = pages.length;
   const safePage = Math.min(page, totalPages - 1);
-  const pageCards = pages[safePage] ?? [];
-  const emptySlots = cardsPerPage - pageCards.length;
 
   function goToPage(p: number) {
     setPage(Math.max(0, Math.min(p, totalPages - 1)));
+  }
+
+  // --- arrangement history ---------------------------------------------------
+  function snapshot() {
+    setPast((p) => [...p.slice(-24), cards.map((c) => c.id)]);
+    setFutureOrders([]);
+  }
+  function clearHistory() {
+    setPast([]);
+    setFutureOrders([]);
+  }
+  function applyOrder(order: string[]) {
+    setCards((prev) => {
+      const byId = new Map(prev.map((c) => [c.id, c]));
+      const next = order
+        .map((id) => byId.get(id))
+        .filter((c): c is BinderCard => !!c);
+      for (const c of prev) if (!order.includes(c.id)) next.push(c);
+      return next.map((c, i) => ({ ...c, position: i }));
+    });
+    reorderBinder(binder.id, order);
+  }
+  function undo() {
+    if (past.length === 0) return;
+    const prevOrder = past[past.length - 1];
+    setPast((p) => p.slice(0, -1));
+    setFutureOrders((f) => [cards.map((c) => c.id), ...f].slice(0, 25));
+    applyOrder(prevOrder);
+  }
+  function redo() {
+    if (futureOrders.length === 0) return;
+    const nextOrder = futureOrders[0];
+    setFutureOrders((f) => f.slice(1));
+    setPast((p) => [...p, cards.map((c) => c.id)].slice(-25));
+    applyOrder(nextOrder);
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (selectMode || editingName || editingDesc || editingLabelPage !== null) return;
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const k = e.key.toLowerCase();
+      if (k === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (k === "y" || (k === "z" && e.shiftKey)) {
+        e.preventDefault();
+        redo();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  // --- page labels ---------------------------------------------------------
+  function saveLabel(pageIndex: number) {
+    const trimmed = labelDraft.trim();
+    const next = { ...pageLabels };
+    if (trimmed) next[String(pageIndex)] = trimmed;
+    else delete next[String(pageIndex)];
+    setPageLabels(next);
+    setEditingLabelPage(null);
+    updatePageLabels(binder.id, next);
   }
 
   async function handleGridChange(size: string) {
@@ -208,6 +284,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   function handleSort(key: string) {
     setSortKey(key);
     if (key === "custom") return;
+    snapshot();
     const sorted = [...cards].sort((a, b) => {
       if (key === "name") return a.name.localeCompare(b.name);
       if (key === "set") return (a.set_name ?? "").localeCompare(b.set_name ?? "");
@@ -250,6 +327,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
 
   async function handleAddMany(picked: SearchResult[], toCurrentPage: boolean) {
     if (picked.length === 0) return;
+    clearHistory();
     setAdding(true);
     try {
       const pageStart = safePage * cardsPerPage;
@@ -301,6 +379,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   }
 
   async function handleRemove(id: string) {
+    clearHistory();
     setRemovingId(id);
     await removeFromBinder(id);
     setCards((prev) => {
@@ -313,6 +392,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   }
 
   function moveCard(sourceId: string, targetIndex: number) {
+    snapshot();
     setCards((prev) => {
       const from = prev.findIndex((c) => c.id === sourceId);
       if (from === -1) return prev;
@@ -342,13 +422,13 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     moveCard(sourceId, to);
   }
 
-  function handleDropOnEmpty() {
+  function handleDropOnEmpty(pageIndex: number) {
     const sourceId = draggedId;
     setDraggedId(null);
     setDragOverId(null);
     if (!sourceId) return;
-    // empty slots only render on the current page — land the card at its end
-    moveCard(sourceId, safePage * cardsPerPage + pageCards.length);
+    const pc = pages[pageIndex] ?? [];
+    moveCard(sourceId, pageIndex * cardsPerPage + pc.length);
   }
 
   function handleVariantChange(cardId: string, variant: string) {
@@ -384,6 +464,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   }
 
   async function handleBulkDelete() {
+    clearHistory();
     setBulkBusy(true);
     const ids = Array.from(selectedIds);
     await bulkDeleteCards(ids);
@@ -394,6 +475,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   }
 
   async function handleBulkMove(targetId: string) {
+    clearHistory();
     setBulkBusy(true);
     const ids = Array.from(selectedIds);
     await moveCardsToBinder(ids, targetId);
@@ -412,6 +494,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       setSwapFrom(null);
       return;
     }
+    snapshot();
     const newPages = [...pages];
     [newPages[swapFrom], newPages[pageIndex]] = [newPages[pageIndex], newPages[swapFrom]];
     const flat = newPages.flat();
@@ -420,8 +503,222 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       binder.id,
       newPages.map((p) => p.map((c) => c.id))
     );
+    // the labels travel with their pages
+    const a = String(swapFrom);
+    const b = String(pageIndex);
+    if (pageLabels[a] || pageLabels[b]) {
+      const nextLabels = { ...pageLabels };
+      const tmp = nextLabels[a];
+      if (nextLabels[b]) nextLabels[a] = nextLabels[b];
+      else delete nextLabels[a];
+      if (tmp) nextLabels[b] = tmp;
+      else delete nextLabels[b];
+      setPageLabels(nextLabels);
+      updatePageLabels(binder.id, nextLabels);
+    }
     setSwapFrom(null);
   }
+
+  function renderPage(pageIndex: number) {
+    const pc = pages[pageIndex] ?? [];
+    const empties = Math.max(0, cardsPerPage - pc.length);
+    const label = pageLabels[String(pageIndex)];
+    return (
+      <div className="min-w-0 flex-1">
+        <div className="mb-2 flex items-center justify-center print:hidden">
+          {editingLabelPage === pageIndex ? (
+            <div className="flex items-center gap-1.5">
+              <Input
+                autoFocus
+                value={labelDraft}
+                onChange={(e) => setLabelDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveLabel(pageIndex)}
+                placeholder={`Rótulo da página ${pageIndex + 1}`}
+                className="h-7 max-w-[200px] text-xs"
+              />
+              <button
+                onClick={() => saveLabel(pageIndex)}
+                aria-label="Salvar rótulo"
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-orange-deep text-white"
+              >
+                <Check className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setLabelDraft(label ?? "");
+                setEditingLabelPage(pageIndex);
+              }}
+              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold text-ink-muted transition-colors hover:text-ink"
+            >
+              {label ? (
+                <>
+                  <Tag className="h-3 w-3 text-orange-deep" />
+                  {label}
+                </>
+              ) : (
+                <span className="flex items-center gap-0.5 opacity-60">
+                  <Plus className="h-3 w-3" /> rótulo
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+
+        <motion.div
+          key={`${gridSize}-${pageIndex}`}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className={`grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8 print:hidden`}
+        >
+          {pc.map((card) => (
+            <div
+              key={card.id}
+              draggable={!selectMode}
+              onDragStart={(e) => {
+                setDraggedId(card.id);
+                e.dataTransfer.effectAllowed = "move";
+                e.dataTransfer.setData("text/plain", card.id);
+              }}
+              onDragEnd={() => {
+                setDraggedId(null);
+                setDragOverId(null);
+              }}
+              onDragOver={(e) => {
+                if (!draggedId || draggedId === card.id) return;
+                e.preventDefault();
+                setDragOverId(card.id);
+              }}
+              onDragLeave={() => setDragOverId((cur) => (cur === card.id ? null : cur))}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleDropOnCard(card.id);
+              }}
+              onClick={() => selectMode && toggleCardSelected(card.id)}
+              style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
+              className={`group relative aspect-[5/7] overflow-hidden rounded-lg border-2 bg-bg shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
+              } ${
+                selectedIds.has(card.id) || dragOverId === card.id
+                  ? "border-orange-deep ring-2 ring-orange-deep"
+                  : "border-ink/10"
+              } ${draggedId === card.id ? "opacity-30" : ""}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
+              <img
+                src={card.image_url}
+                alt={card.name}
+                draggable={false}
+                className="h-full w-full object-cover"
+              />
+
+              {selectMode ? (
+                <div
+                  className={`absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                    selectedIds.has(card.id)
+                      ? "border-orange-deep bg-orange-deep text-white"
+                      : "border-white/70 bg-black/40"
+                  }`}
+                >
+                  {selectedIds.has(card.id) && <Check className="h-3 w-3" />}
+                </div>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleSpan(card.id, card.span_cols);
+                  }}
+                  aria-label={
+                    card.span_cols > 1 ? "Desfazer carta grande" : "Marcar como carta grande"
+                  }
+                  title={card.span_cols > 1 ? "Desfazer carta grande" : "Carta grande (2 espaços)"}
+                  className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
+                >
+                  {card.span_cols > 1 ? (
+                    <Minimize2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <Maximize2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              )}
+
+              {!selectMode && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemove(card.id);
+                  }}
+                  disabled={removingId === card.id}
+                  aria-label={`Remover ${card.name}`}
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 disabled:opacity-100"
+                >
+                  {removingId === card.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              )}
+
+              {PRICES_ENABLED && showPrices && (
+                <div className="absolute bottom-1 left-1">
+                  <PriceBadge name={card.name} cardNumber={card.card_number} />
+                </div>
+              )}
+
+              {!selectMode && (
+                <div onClick={(e) => e.stopPropagation()} className="absolute bottom-1 right-1">
+                  <Select
+                    value={card.variant ?? "normal"}
+                    onValueChange={(v) => v && handleVariantChange(card.id, v)}
+                  >
+                    <SelectTrigger className="h-5 min-w-0 gap-0.5 rounded-full border-0 bg-black/60 px-1.5 py-0 text-[9px] font-bold text-white backdrop-blur-sm [&_svg]:h-2.5 [&_svg]:w-2.5">
+                      <SelectValue>{(v: string) => VARIANT_ABBR[v] || "···"}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(VARIANT_LABEL).map(([key, lbl]) => (
+                        <SelectItem key={key} value={key}>
+                          {lbl}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {Array.from({ length: empties }).map((_, i) => {
+            const slotKey = `p${pageIndex}-empty-${i}`;
+            return (
+              <button
+                key={slotKey}
+                onClick={() => setSearchOpen(true)}
+                onDragOver={(e) => {
+                  if (!draggedId) return;
+                  e.preventDefault();
+                  setDragOverId(slotKey);
+                }}
+                onDragLeave={() => setDragOverId((cur) => (cur === slotKey ? null : cur))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDropOnEmpty(pageIndex);
+                }}
+                aria-label="Mover carta pra este espaço ou adicionar carta"
+                className={`aspect-[5/7] rounded-lg border-2 border-dashed transition-colors hover:border-orange hover:bg-orange/5 ${
+                  dragOverId === slotKey ? "border-orange-deep bg-orange/10" : "border-ink/10"
+                }`}
+              />
+            );
+          })}
+        </motion.div>
+      </div>
+    );
+  }
+
+  const spread = viewMode === "spread" && totalPages > 1;
 
   return (
     <div>
@@ -600,10 +897,46 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
               </SelectContent>
             </Select>
 
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={undo}
+                disabled={past.length === 0}
+                aria-label="Desfazer"
+                title="Desfazer (Ctrl+Z)"
+                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink/10 text-ink transition-colors hover:bg-surface-alt disabled:opacity-30"
+              >
+                <Undo2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={redo}
+                disabled={futureOrders.length === 0}
+                aria-label="Refazer"
+                title="Refazer (Ctrl+Shift+Z)"
+                className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink/10 text-ink transition-colors hover:bg-surface-alt disabled:opacity-30"
+              >
+                <Redo2 className="h-4 w-4" />
+              </button>
+            </div>
+
+            {totalPages > 1 && (
+              <button
+                onClick={() => setViewMode((v) => (v === "single" ? "spread" : "single"))}
+                className={`hidden items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition-colors lg:flex ${
+                  spread
+                    ? "border-orange bg-orange/10 text-orange-deep"
+                    : "border-ink/10 text-ink-muted hover:text-ink"
+                }`}
+                title="Ver duas páginas lado a lado"
+              >
+                {spread ? <BookText className="h-3.5 w-3.5" /> : <BookOpen className="h-3.5 w-3.5" />}
+                {spread ? "Livro" : "Página"}
+              </button>
+            )}
+
             {totalPages > 1 && (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => goToPage(safePage - 1)}
+                  onClick={() => goToPage(safePage - (spread ? 2 : 1))}
                   disabled={safePage === 0}
                   aria-label="Página anterior"
                   className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink/10 text-ink transition-colors hover:bg-surface-alt disabled:opacity-30"
@@ -611,11 +944,13 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <span className="text-sm font-semibold text-ink-muted">
-                  Página {safePage + 1} de {totalPages}
+                  {spread && safePage + 1 < totalPages
+                    ? `Páginas ${safePage + 1}–${safePage + 2} de ${totalPages}`
+                    : `Página ${safePage + 1} de ${totalPages}`}
                 </span>
                 <button
-                  onClick={() => goToPage(safePage + 1)}
-                  disabled={safePage === totalPages - 1}
+                  onClick={() => goToPage(safePage + (spread ? 2 : 1))}
+                  disabled={safePage >= totalPages - 1}
                   aria-label="Próxima página"
                   className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink/10 text-ink transition-colors hover:bg-surface-alt disabled:opacity-30"
                 >
@@ -625,175 +960,42 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
             )}
           </div>
 
-          <motion.div
-            key={`${gridSize}-${safePage}`}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className={`mt-4 grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8 print:hidden`}
-          >
-            {pageCards.map((card) => (
-                <div
-                  key={card.id}
-                  draggable={!selectMode}
-                  onDragStart={(e) => {
-                    setDraggedId(card.id);
-                    e.dataTransfer.effectAllowed = "move";
-                    // Firefox needs data set for a drag to start
-                    e.dataTransfer.setData("text/plain", card.id);
-                  }}
-                  onDragEnd={() => {
-                    setDraggedId(null);
-                    setDragOverId(null);
-                  }}
-                  onDragOver={(e) => {
-                    if (!draggedId || draggedId === card.id) return;
-                    e.preventDefault();
-                    setDragOverId(card.id);
-                  }}
-                  onDragLeave={() =>
-                    setDragOverId((cur) => (cur === card.id ? null : cur))
-                  }
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    handleDropOnCard(card.id);
-                  }}
-                  onClick={() => selectMode && toggleCardSelected(card.id)}
-                  style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
-                  className={`group relative aspect-[5/7] overflow-hidden rounded-lg border-2 bg-bg shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
-                    selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
-                  } ${
-                    selectedIds.has(card.id) || dragOverId === card.id
-                      ? "border-orange-deep ring-2 ring-orange-deep"
-                      : "border-ink/10"
-                  } ${draggedId === card.id ? "opacity-30" : ""}`}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
-                  <img
-                    src={card.image_url}
-                    alt={card.name}
-                    draggable={false}
-                    className="h-full w-full object-cover"
-                  />
-
-                  {selectMode ? (
-                    <div
-                      className={`absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                        selectedIds.has(card.id)
-                          ? "border-orange-deep bg-orange-deep text-white"
-                          : "border-white/70 bg-black/40"
-                      }`}
-                    >
-                      {selectedIds.has(card.id) && <Check className="h-3 w-3" />}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleSpan(card.id, card.span_cols);
-                      }}
-                      aria-label={card.span_cols > 1 ? "Desfazer carta grande" : "Marcar como carta grande"}
-                      title={card.span_cols > 1 ? "Desfazer carta grande" : "Carta grande (2 espaços)"}
-                      className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
-                    >
-                      {card.span_cols > 1 ? (
-                        <Minimize2 className="h-3.5 w-3.5" />
-                      ) : (
-                        <Maximize2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  )}
-
-                  {!selectMode && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemove(card.id);
-                      }}
-                      disabled={removingId === card.id}
-                      aria-label={`Remover ${card.name}`}
-                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 disabled:opacity-100"
-                    >
-                      {removingId === card.id ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  )}
-
-                  {PRICES_ENABLED && showPrices && (
-                    <div className="absolute bottom-1 left-1">
-                      <PriceBadge name={card.name} cardNumber={card.card_number} />
-                    </div>
-                  )}
-
-                  {!selectMode && (
-                    <div onClick={(e) => e.stopPropagation()} className="absolute bottom-1 right-1">
-                      <Select
-                        value={card.variant ?? "normal"}
-                        onValueChange={(v) => v && handleVariantChange(card.id, v)}
-                      >
-                        <SelectTrigger className="h-5 min-w-0 gap-0.5 rounded-full border-0 bg-black/60 px-1.5 py-0 text-[9px] font-bold text-white backdrop-blur-sm [&_svg]:h-2.5 [&_svg]:w-2.5">
-                          <SelectValue>{(v: string) => VARIANT_ABBR[v] || "···"}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(VARIANT_LABEL).map(([key, label]) => (
-                            <SelectItem key={key} value={key}>
-                              {label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-            {/* empty slots to keep the page feeling like a real binder page */}
-            {Array.from({ length: emptySlots }).map((_, i) => (
-              <button
-                key={`empty-${i}`}
-                onClick={() => setSearchOpen(true)}
-                onDragOver={(e) => {
-                  if (!draggedId) return;
-                  e.preventDefault();
-                  setDragOverId(`empty-${i}`);
-                }}
-                onDragLeave={() =>
-                  setDragOverId((cur) => (cur === `empty-${i}` ? null : cur))
-                }
-                onDrop={(e) => {
-                  e.preventDefault();
-                  handleDropOnEmpty();
-                }}
-                aria-label="Mover carta pra este espaço ou adicionar carta"
-                className={`aspect-[5/7] rounded-lg border-2 border-dashed transition-colors hover:border-orange hover:bg-orange/5 ${
-                  dragOverId === `empty-${i}`
-                    ? "border-orange-deep bg-orange/10"
-                    : "border-ink/10"
-                }`}
-              />
-            ))}
-          </motion.div>
+          {spread ? (
+            <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:gap-6">
+              {renderPage(safePage)}
+              {safePage + 1 < totalPages ? (
+                renderPage(safePage + 1)
+              ) : (
+                <div className="hidden flex-1 lg:block" />
+              )}
+            </div>
+          ) : (
+            <div className="mt-4">{renderPage(safePage)}</div>
+          )}
 
           {/* print-only: every page, one per sheet */}
           <div className="hidden print:block">
             {pages.map((pc, pi) => (
-              <div
-                key={pi}
-                className={`grid ${COLS_CLASS[cols]} gap-2 ${pi < pages.length - 1 ? "break-after-page" : ""}`}
-              >
-                {pc.map((card) => (
+              <div key={pi} className={pi < pages.length - 1 ? "break-after-page" : ""}>
+                {pageLabels[String(pi)] && (
+                  <p className="mb-2 font-display text-lg text-ink">{pageLabels[String(pi)]}</p>
+                )}
+                <div className={`grid ${COLS_CLASS[cols]} gap-2`}>
+                  {pc.map((card) => (
                   <div
                     key={card.id}
                     style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
                     className="aspect-[5/7] overflow-hidden rounded-lg border border-ink/20"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
-                    <img src={card.image_url} alt={card.name} className="h-full w-full object-cover" />
-                  </div>
-                ))}
+                      {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
+                      <img
+                        src={card.image_url}
+                        alt={card.name}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -916,7 +1118,9 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                     <div key={`e-${i}`} className="aspect-[5/7] w-full rounded-sm bg-surface-alt" />
                   ))}
                 </div>
-                <p className="mt-1.5 text-xs font-bold text-ink">Página {pi + 1}</p>
+                <p className="mt-1.5 text-xs font-bold text-ink">
+                  {pageLabels[String(pi)] ?? `Página ${pi + 1}`}
+                </p>
                 <p className="text-[10px] text-ink-muted">{pc.length} cartas</p>
               </button>
             ))}
