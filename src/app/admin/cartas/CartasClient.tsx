@@ -34,6 +34,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { AdminPageHeader } from "@/components/AdminPageHeader";
 
 const STATUS_LABEL: Record<Card["status"], string> = {
   available: "Disponível",
@@ -81,21 +82,16 @@ export function CartasClient({
 
   return (
     <div>
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="flex items-center justify-between"
-      >
-        <div>
-          <h1 className="font-display text-2xl text-ink">CARTAS</h1>
-          <p className="mt-1 text-sm text-ink-muted">Catálogo pro leilão e vendas.</p>
-        </div>
-        <Button onClick={() => setEditing("new")}>
-          <Plus className="h-4 w-4" />
-          Nova carta
-        </Button>
-      </motion.div>
+      <AdminPageHeader
+        title="CARTAS"
+        subtitle="Catálogo pro leilão e vendas."
+        action={
+          <Button onClick={() => setEditing("new")}>
+            <Plus className="h-4 w-4" />
+            Nova carta
+          </Button>
+        }
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}

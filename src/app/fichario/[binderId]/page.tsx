@@ -30,7 +30,7 @@ export default async function BinderPage({
     .order("position", { ascending: true });
 
   return (
-    <main className="min-h-screen bg-bg px-5 py-10 sm:px-8">
+    <main className="bg-halftone min-h-screen bg-bg px-5 py-10 sm:px-8">
       <div className="mx-auto max-w-4xl">
         <CustomerNav />
 

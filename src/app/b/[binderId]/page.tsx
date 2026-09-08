@@ -48,11 +48,13 @@ export default async function SharedBinderPage({
   const { cols } = GRID_SIZES[binder.grid_size] ?? GRID_SIZES["3x3"];
 
   return (
-    <main className="min-h-screen bg-bg px-5 py-10 sm:px-8">
+    <main className="bg-halftone min-h-screen bg-bg px-5 py-10 sm:px-8">
       <div className="mx-auto max-w-4xl">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-105">
           <Image src="/brand/icon-square.png" alt="Easy Cards" width={32} height={32} className="rounded-full" />
-          <span className="font-display text-base tracking-wide text-ink">EASY CARDS</span>
+          <span className="text-comic-shadow-sm font-display text-lg tracking-wide text-orange-deep">
+            EASY <span className="text-orange">CARDS</span>
+          </span>
         </Link>
 
         <div className="mt-6 flex items-center gap-2">

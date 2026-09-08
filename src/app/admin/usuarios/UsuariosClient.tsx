@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import type { Profile, UserRole } from "@/lib/supabase/types";
 import { updateUserRole } from "./actions";
+import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -52,17 +52,15 @@ export function UsuariosClient({
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-    >
-      <h1 className="font-display text-2xl text-ink">USUÁRIOS</h1>
-      <p className="mt-1 text-sm text-ink-muted">
-        {canEditRoles
-          ? "Controle quem é CTO, admin, equipe ou cliente."
-          : "Só o CTO pode alterar permissões de usuários."}
-      </p>
+    <div>
+      <AdminPageHeader
+        title="USUÁRIOS"
+        subtitle={
+          canEditRoles
+            ? "Controle quem é CTO, admin, equipe ou cliente."
+            : "Só o CTO pode alterar permissões de usuários."
+        }
+      />
 
       {canEditRoles && (
         <div className="mt-4 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-ink">
@@ -126,6 +124,6 @@ export function UsuariosClient({
           </TableBody>
         </Table>
       </div>
-    </motion.div>
+    </div>
   );
 }

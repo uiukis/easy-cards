@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Menu, X, Wallet, BookOpen } from "lucide-react";
 import { LogoutButton } from "@/app/admin/LogoutButton";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const LINKS = [
   { href: "/minhas-cartas", label: "Minhas cartas", icon: Wallet },
@@ -21,9 +22,11 @@ export function CustomerNav() {
 
   return (
     <div className="mb-6 flex items-center justify-between">
-      <Link href="/minhas-cartas" className="flex items-center gap-2">
+      <Link href="/minhas-cartas" className="flex items-center gap-2 transition-transform hover:scale-105">
         <Image src="/brand/icon-square.png" alt="Easy Cards" width={32} height={32} className="rounded-full" />
-        <span className="font-display text-base tracking-wide text-ink">EASY CARDS</span>
+        <span className="text-comic-shadow-sm font-display text-lg tracking-wide text-orange-deep">
+          EASY <span className="text-orange">CARDS</span>
+        </span>
       </Link>
 
       <nav className="hidden items-center gap-1 sm:flex">
@@ -33,7 +36,7 @@ export function CustomerNav() {
             href={link.href}
             className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
               isActive(link.href)
-                ? "bg-orange-deep text-white"
+                ? "bg-orange-deep text-white shadow-sm shadow-orange-deep/25"
                 : "text-ink-muted hover:bg-surface-alt hover:text-ink"
             }`}
           >
@@ -41,16 +44,20 @@ export function CustomerNav() {
             {link.label}
           </Link>
         ))}
-        <LogoutButton className="ml-2" />
+        <LogoutButton className="ml-1" />
+        <ThemeToggle />
       </nav>
 
-      <button
-        onClick={() => setOpen(true)}
-        aria-label="Abrir menu"
-        className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink/15 bg-surface text-ink transition-transform active:scale-95 sm:hidden"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
+      <div className="flex items-center gap-2 sm:hidden">
+        <ThemeToggle />
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Abrir menu"
+          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink/15 bg-surface text-ink transition-transform active:scale-95"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </div>
 
       <AnimatePresence>
         {open && (

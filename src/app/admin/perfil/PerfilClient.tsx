@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
 import { Loader2, Sparkles } from "lucide-react";
 import type { Profile } from "@/lib/supabase/types";
 import { updateOwnProfile } from "./actions";
+import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,16 +35,10 @@ export function PerfilClient({ profile }: { profile: Profile }) {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-      className="max-w-md"
-    >
-      <h1 className="font-display text-2xl text-ink">MEU PERFIL</h1>
-      <p className="mt-1 text-sm text-ink-muted">{profile.phone}</p>
+    <div>
+      <AdminPageHeader title="MEU PERFIL" subtitle={profile.phone ?? undefined} />
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+      <form onSubmit={handleSubmit} className="mt-6 max-w-md space-y-4">
         <div className="space-y-1.5">
           <Label>Nome completo</Label>
           <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} />
@@ -73,7 +67,7 @@ export function PerfilClient({ profile }: { profile: Profile }) {
         </Button>
         {saved && <p className="text-sm text-teal">Salvo!</p>}
       </form>
-    </motion.div>
+    </div>
   );
 }
 

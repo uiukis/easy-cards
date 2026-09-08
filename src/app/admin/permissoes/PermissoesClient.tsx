@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
 import { Loader2, Lock, UserCog } from "lucide-react";
 import { PERMISSION_LABEL, resolvePermissions, type PermissionKey } from "@/lib/permissions";
 import type { UserRole } from "@/lib/supabase/types";
 import { setPermission, setUserPermission, clearUserPermission } from "./actions";
+import { AdminPageHeader } from "@/components/AdminPageHeader";
 import {
   Table,
   TableBody,
@@ -111,18 +111,12 @@ export function PermissoesClient({
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
-    >
-      <div className="flex items-center gap-2">
-        <Lock className="h-5 w-5 text-primary" />
-        <h1 className="font-display text-2xl text-ink">PERMISSÕES</h1>
-      </div>
-      <p className="mt-1 text-sm text-ink-muted">
-        Só o CTO vê essa página. Controla o que admin e equipe podem acessar.
-      </p>
+    <div>
+      <AdminPageHeader
+        title="PERMISSÕES"
+        subtitle="Só o CTO vê essa página. Controla o que admin e equipe podem acessar."
+        icon={Lock}
+      />
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
         <Table>
@@ -234,7 +228,7 @@ export function PermissoesClient({
           )}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 

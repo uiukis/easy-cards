@@ -12,6 +12,7 @@ import {
   togglePressMention,
   deletePressMention,
 } from "./actions";
+import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,14 +43,10 @@ export function QuadroClient({
 }) {
   return (
     <div>
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-      >
-        <h1 className="font-display text-2xl text-ink">QUADRO</h1>
-        <p className="mt-1 text-sm text-ink-muted">Apoiadores e imprensa visíveis no site.</p>
-      </motion.div>
+      <AdminPageHeader
+        title="QUADRO"
+        subtitle="Apoiadores e imprensa visíveis no site."
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
