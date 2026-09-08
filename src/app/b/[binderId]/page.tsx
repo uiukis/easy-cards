@@ -17,6 +17,12 @@ const COLS_CLASS: Record<number, string> = {
   4: "grid-cols-4",
 };
 
+const VARIANT_ABBR: Record<string, string> = {
+  reverse_holo: "RH",
+  holo: "H",
+  first_edition: "1ED",
+};
+
 export default async function SharedBinderPage({
   params,
 }: {
@@ -69,10 +75,16 @@ export default async function SharedBinderPage({
             {cards.map((card) => (
               <div
                 key={card.id}
-                className="aspect-[5/7] overflow-hidden rounded-lg border-2 border-ink/10 bg-bg shadow-sm"
+                style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
+                className="relative aspect-[5/7] overflow-hidden rounded-lg border-2 border-ink/10 bg-bg shadow-sm"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
                 <img src={card.image_url} alt={card.name} className="h-full w-full object-cover" />
+                {card.variant && VARIANT_ABBR[card.variant] && (
+                  <span className="absolute bottom-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">
+                    {VARIANT_ABBR[card.variant]}
+                  </span>
+                )}
               </div>
             ))}
           </div>
