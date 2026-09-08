@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import {
   Plus,
   Trash2,
@@ -31,7 +31,6 @@ import { CardSearch, type SearchResult } from "@/app/admin/cartas/CardSearch";
 import {
   addToBinder,
   removeFromBinder,
-  swapBinderCards,
   updateGridSize,
   renameBinder,
   setBinderShared,
@@ -111,6 +110,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [showPrices, setShowPrices] = useState(true);
   const [sortKey, setSortKey] = useState("custom");
   const [shareOpen, setShareOpen] = useState(false);
@@ -242,26 +242,43 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     setRemovingId(null);
   }
 
-  function handleDrop(targetId: string) {
-    if (!draggedId || draggedId === targetId) {
-      setDraggedId(null);
-      return;
-    }
+  function moveCard(sourceId: string, targetIndex: number) {
+    setCards((prev) => {
+      const from = prev.findIndex((c) => c.id === sourceId);
+      if (from === -1) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      const idx = Math.max(0, Math.min(targetIndex, next.length));
+      next.splice(idx, 0, moved);
+      const repositioned = next.map((c, i) => ({ ...c, position: i }));
+      reorderBinder(
+        binder.id,
+        repositioned.map((c) => c.id)
+      );
+      return repositioned;
+    });
+  }
+
+  function handleDropOnCard(targetId: string) {
     const sourceId = draggedId;
     setDraggedId(null);
-    setCards((prev) => {
-      const next = [...prev];
-      const ia = next.findIndex((c) => c.id === sourceId);
-      const ib = next.findIndex((c) => c.id === targetId);
-      if (ia === -1 || ib === -1) return prev;
-      const posA = next[ia].position;
-      const posB = next[ib].position;
-      next[ia] = { ...next[ia], position: posB };
-      next[ib] = { ...next[ib], position: posA };
-      next.sort((x, y) => x.position - y.position);
-      return next;
-    });
-    swapBinderCards(sourceId, targetId);
+    setDragOverId(null);
+    if (!sourceId || sourceId === targetId) return;
+    const to = cards.findIndex((c) => c.id === targetId);
+    if (to === -1) return;
+    // drop the card into the target slot; the rest shift to make room.
+    // splicing the source out first means inserting at `to` lands the card
+    // after the target when dragging down, and before it when dragging up.
+    moveCard(sourceId, to);
+  }
+
+  function handleDropOnEmpty() {
+    const sourceId = draggedId;
+    setDraggedId(null);
+    setDragOverId(null);
+    if (!sourceId) return;
+    // empty slots only render on the current page — land the card at its end
+    moveCard(sourceId, safePage * cardsPerPage + pageCards.length);
   }
 
   function handleVariantChange(cardId: string, variant: string) {
@@ -505,31 +522,41 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
             transition={{ duration: 0.35, ease: "easeOut" }}
             className={`mt-4 grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8 print:hidden`}
           >
-            <AnimatePresence initial={false}>
-              {pageCards.map((card, i) => (
-                <motion.div
+            {pageCards.map((card) => (
+                <div
                   key={card.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.85 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.85 }}
-                  transition={{ duration: 0.3, delay: i < 12 ? i * 0.025 : 0 }}
                   draggable={!selectMode}
-                  onDragStart={() => setDraggedId(card.id)}
-                  onDragOver={(e) => e.preventDefault()}
+                  onDragStart={(e) => {
+                    setDraggedId(card.id);
+                    e.dataTransfer.effectAllowed = "move";
+                    // Firefox needs data set for a drag to start
+                    e.dataTransfer.setData("text/plain", card.id);
+                  }}
+                  onDragEnd={() => {
+                    setDraggedId(null);
+                    setDragOverId(null);
+                  }}
+                  onDragOver={(e) => {
+                    if (!draggedId || draggedId === card.id) return;
+                    e.preventDefault();
+                    setDragOverId(card.id);
+                  }}
+                  onDragLeave={() =>
+                    setDragOverId((cur) => (cur === card.id ? null : cur))
+                  }
                   onDrop={(e) => {
                     e.preventDefault();
-                    handleDrop(card.id);
+                    handleDropOnCard(card.id);
                   }}
                   onClick={() => selectMode && toggleCardSelected(card.id)}
                   style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
-                  className={`group relative aspect-[5/7] overflow-hidden rounded-lg border-2 bg-bg shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md ${
+                  className={`group relative aspect-[5/7] overflow-hidden rounded-lg border-2 bg-bg shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
                     selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
                   } ${
-                    selectedIds.has(card.id)
+                    selectedIds.has(card.id) || dragOverId === card.id
                       ? "border-orange-deep ring-2 ring-orange-deep"
                       : "border-ink/10"
-                  } ${draggedId === card.id ? "opacity-40" : ""}`}
+                  } ${draggedId === card.id ? "opacity-30" : ""}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
                   <img
@@ -610,19 +637,32 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                       </Select>
                     </div>
                   )}
-                </motion.div>
+                </div>
               ))}
-            </AnimatePresence>
 
             {/* empty slots to keep the page feeling like a real binder page */}
             {Array.from({ length: emptySlots }).map((_, i) => (
               <button
                 key={`empty-${i}`}
                 onClick={() => setSearchOpen(true)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => e.preventDefault()}
-                aria-label="Adicionar carta neste espaço"
-                className="aspect-[5/7] rounded-lg border-2 border-dashed border-ink/10 transition-colors hover:border-orange hover:bg-orange/5"
+                onDragOver={(e) => {
+                  if (!draggedId) return;
+                  e.preventDefault();
+                  setDragOverId(`empty-${i}`);
+                }}
+                onDragLeave={() =>
+                  setDragOverId((cur) => (cur === `empty-${i}` ? null : cur))
+                }
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDropOnEmpty();
+                }}
+                aria-label="Mover carta pra este espaço ou adicionar carta"
+                className={`aspect-[5/7] rounded-lg border-2 border-dashed transition-colors hover:border-orange hover:bg-orange/5 ${
+                  dragOverId === `empty-${i}`
+                    ? "border-orange-deep bg-orange/10"
+                    : "border-ink/10"
+                }`}
               />
             ))}
           </motion.div>

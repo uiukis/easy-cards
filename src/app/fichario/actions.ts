@@ -205,28 +205,3 @@ export async function reorderPages(binderId: string, pageOrder: string[][]) {
   );
   revalidatePath("/fichario");
 }
-
-export async function swapBinderCards(idA: string, idB: string) {
-  const supabase = await createClient();
-  const { data: cards, error: fetchError } = await supabase
-    .from("binder_cards")
-    .select("id, position")
-    .in("id", [idA, idB]);
-  if (fetchError) throw new Error(fetchError.message);
-  if (!cards || cards.length !== 2) return;
-
-  const [a, b] = cards;
-  const { error: errorA } = await supabase
-    .from("binder_cards")
-    .update({ position: b.position })
-    .eq("id", a.id);
-  if (errorA) throw new Error(errorA.message);
-
-  const { error: errorB } = await supabase
-    .from("binder_cards")
-    .update({ position: a.position })
-    .eq("id", b.id);
-  if (errorB) throw new Error(errorB.message);
-
-  revalidatePath("/fichario");
-}
