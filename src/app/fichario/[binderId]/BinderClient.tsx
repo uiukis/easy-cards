@@ -28,9 +28,10 @@ import {
 } from "lucide-react";
 import type { Binder, BinderCard } from "@/lib/supabase/types";
 import { PRICES_ENABLED } from "@/lib/features";
-import { CardSearch, type SearchResult } from "@/app/admin/cartas/CardSearch";
+import type { SearchResult } from "@/app/admin/cartas/CardSearch";
+import { AddCardsDialog } from "../AddCardsDialog";
 import {
-  addToBinder,
+  addManyToBinder,
   removeFromBinder,
   updateGridSize,
   renameBinder,
@@ -142,7 +143,6 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const [descDraft, setDescDraft] = useState(binder.description ?? "");
   const [page, setPage] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [addToCurrentPage, setAddToCurrentPage] = useState(true);
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -248,54 +248,52 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     });
   }
 
-  async function handleSelect(result: SearchResult) {
+  async function handleAddMany(picked: SearchResult[], toCurrentPage: boolean) {
+    if (picked.length === 0) return;
     setAdding(true);
-    const input = {
-      tcg_api_id: result.id,
-      name: result.name,
-      set_name: result.setName,
-      card_number: result.cardNumber,
-      image_url: result.imageUrl,
-      rarity: result.rarity ?? null,
-      types: result.types ?? null,
-    };
     try {
-      const { id } = await addToBinder(binder.id, input);
-      const newCard: BinderCard = {
-        id,
+      const pageStart = safePage * cardsPerPage;
+      const onPage = cards.slice(pageStart, pageStart + cardsPerPage).length;
+      const atIndex =
+        toCurrentPage && onPage < cardsPerPage ? pageStart + onPage : undefined;
+
+      const payload = picked.map((c) => ({
+        tcg_api_id: c.id,
+        name: c.name,
+        set_name: c.setName,
+        card_number: c.cardNumber,
+        image_url: c.imageUrl,
+        rarity: c.rarity ?? null,
+        types: c.types ?? null,
+      }));
+      const { ids } = await addManyToBinder(binder.id, payload, atIndex);
+
+      const newCards: BinderCard[] = picked.map((c, i) => ({
+        id: ids[i] ?? crypto.randomUUID(),
         user_id: "",
         binder_id: binder.id,
-        tcg_api_id: input.tcg_api_id,
-        name: input.name,
-        set_name: input.set_name,
-        card_number: input.card_number,
-        image_url: input.image_url,
+        tcg_api_id: c.id,
+        name: c.name,
+        set_name: c.setName,
+        card_number: c.cardNumber,
+        image_url: c.imageUrl,
         position: 0,
         variant: null,
         span_cols: 1,
-        rarity: input.rarity,
-        types: input.types,
+        rarity: c.rarity ?? null,
+        types: c.types ?? null,
         created_at: new Date().toISOString(),
-      };
+      }));
+
       setCards((prev) => {
-        const pageStart = safePage * cardsPerPage;
-        const onPage = prev.slice(pageStart, pageStart + cardsPerPage).length;
-        const insertAt =
-          addToCurrentPage && onPage < cardsPerPage
-            ? Math.min(pageStart + onPage, prev.length)
-            : prev.length;
+        const insertAt = atIndex ?? prev.length;
         const next = [...prev];
-        next.splice(insertAt, 0, newCard);
-        const repositioned = next.map((c, i) => ({ ...c, position: i }));
-        if (insertAt !== prev.length) {
-          reorderBinder(
-            binder.id,
-            repositioned.map((c) => c.id)
-          );
-        }
-        return repositioned;
+        next.splice(insertAt, 0, ...newCards);
+        return next.map((card, i) => ({ ...card, position: i }));
       });
-      if (!addToCurrentPage) setPage(Math.floor(cards.length / cardsPerPage));
+      if (atIndex == null) {
+        setPage(Math.floor((cards.length + newCards.length - 1) / cardsPerPage));
+      }
       setSearchOpen(false);
     } finally {
       setAdding(false);
@@ -823,30 +821,14 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         </div>
       )}
 
-      <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="font-display tracking-wide">BUSCAR CARTA</DialogTitle>
-          </DialogHeader>
-          {adding ? (
-            <div className="flex items-center justify-center gap-2 py-8 text-sm text-ink-muted">
-              <Loader2 className="h-4 w-4 animate-spin" /> Adicionando...
-            </div>
-          ) : (
-            <>
-              <CardSearch onSelect={handleSelect} />
-              {totalPages > 1 && (
-                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border-2 border-ink/10 px-3 py-2">
-                  <span className="text-xs font-semibold text-ink">
-                    Adicionar à página atual ({safePage + 1})
-                  </span>
-                  <Switch checked={addToCurrentPage} onCheckedChange={setAddToCurrentPage} />
-                </label>
-              )}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <AddCardsDialog
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        onConfirm={handleAddMany}
+        showPageToggle={totalPages > 1}
+        currentPage={safePage + 1}
+        adding={adding}
+      />
 
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>
         <DialogContent className="max-w-sm">

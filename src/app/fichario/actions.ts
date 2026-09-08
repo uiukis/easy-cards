@@ -170,6 +170,67 @@ export async function addToBinder(
   return { id: data.id as string };
 }
 
+export async function addManyToBinder(
+  binderId: string,
+  cards: {
+    tcg_api_id: string;
+    name: string;
+    set_name: string;
+    card_number: string;
+    image_url: string;
+    rarity?: string | null;
+    types?: string | null;
+  }[],
+  atIndex?: number
+) {
+  if (cards.length === 0) return { ids: [] as string[] };
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const { data: existing } = await supabase
+    .from("binder_cards")
+    .select("id, position")
+    .eq("binder_id", binderId)
+    .order("position", { ascending: true });
+
+  const ordered = existing ?? [];
+  const insertAt = atIndex == null ? ordered.length : Math.max(0, Math.min(atIndex, ordered.length));
+
+  // Insert the new rows at the tail first (positions are fixed up next).
+  const rows = cards.map((c, i) => ({
+    user_id: user.id,
+    binder_id: binderId,
+    tcg_api_id: c.tcg_api_id || null,
+    name: c.name,
+    set_name: c.set_name || null,
+    card_number: c.card_number || null,
+    image_url: c.image_url,
+    rarity: c.rarity || null,
+    types: c.types || null,
+    position: ordered.length + i,
+  }));
+  const { data: inserted, error } = await supabase.from("binder_cards").insert(rows).select("id");
+  if (error) throw new Error(error.message);
+
+  const newIds = (inserted ?? []).map((r) => r.id as string);
+  const finalOrder = [
+    ...ordered.slice(0, insertAt).map((r) => r.id as string),
+    ...newIds,
+    ...ordered.slice(insertAt).map((r) => r.id as string),
+  ];
+  await Promise.all(
+    finalOrder.map((id, position) =>
+      supabase.from("binder_cards").update({ position }).eq("id", id).eq("binder_id", binderId)
+    )
+  );
+
+  revalidatePath("/fichario");
+  return { ids: newIds };
+}
+
 export async function removeFromBinder(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("binder_cards").delete().eq("id", id);
