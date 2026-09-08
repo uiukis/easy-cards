@@ -27,12 +27,14 @@ import {
   Printer,
 } from "lucide-react";
 import type { Binder, BinderCard } from "@/lib/supabase/types";
+import { PRICES_ENABLED } from "@/lib/features";
 import { CardSearch, type SearchResult } from "@/app/admin/cartas/CardSearch";
 import {
   addToBinder,
   removeFromBinder,
   updateGridSize,
   renameBinder,
+  updateBinderDescription,
   setBinderShared,
   reorderBinder,
   updateCardVariant,
@@ -62,19 +64,49 @@ const SORT_OPTIONS: Record<string, string> = {
   name: "Nome (A-Z)",
   set: "Set",
   number: "Número",
+  rarity: "Raridade",
+  type: "Tipo",
 };
+
+// Rough rarity ranking so "sort by rarity" puts the chase cards last.
+const RARITY_RANK: Record<string, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  "rare holo": 3,
+  "double rare": 4,
+  "rare holo ex": 5,
+  "rare holo gx": 5,
+  "rare holo v": 5,
+  "rare holo vmax": 6,
+  "rare holo vstar": 6,
+  "ultra rare": 7,
+  "illustration rare": 8,
+  "special illustration rare": 9,
+  "rare secret": 10,
+  "hyper rare": 10,
+  "rare rainbow": 10,
+};
+
+function rarityRank(r: string | null): number {
+  if (!r) return -1;
+  return RARITY_RANK[r.toLowerCase()] ?? 3.5;
+}
 
 const GRID_SIZES: Record<string, { cols: number; rows: number; label: string }> = {
   "2x2": { cols: 2, rows: 2, label: "2×2" },
   "3x3": { cols: 3, rows: 3, label: "3×3" },
   "4x3": { cols: 4, rows: 3, label: "4×3" },
   "4x4": { cols: 4, rows: 4, label: "4×4" },
+  "4x5": { cols: 4, rows: 5, label: "4×5" },
+  "5x4": { cols: 5, rows: 4, label: "5×4" },
 };
 
 const COLS_CLASS: Record<number, string> = {
   2: "grid-cols-2",
   3: "grid-cols-3",
   4: "grid-cols-4",
+  5: "grid-cols-5",
 };
 
 const VARIANT_LABEL: Record<string, string> = {
@@ -105,8 +137,12 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const [gridSize, setGridSize] = useState(
     GRID_SIZES[binder.grid_size] ? binder.grid_size : "3x3"
   );
+  const [description, setDescription] = useState(binder.description ?? "");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState(binder.description ?? "");
   const [page, setPage] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [addToCurrentPage, setAddToCurrentPage] = useState(true);
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -160,6 +196,15 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     await renameBinder(binder.id, trimmed);
   }
 
+  async function handleSaveDesc() {
+    const trimmed = descDraft.trim();
+    setDescription(trimmed);
+    setEditingDesc(false);
+    if (trimmed !== (description ?? "")) {
+      await updateBinderDescription(binder.id, trimmed);
+    }
+  }
+
   function handleSort(key: string) {
     setSortKey(key);
     if (key === "custom") return;
@@ -170,6 +215,15 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         const na = parseInt(a.card_number?.split("/")[0] ?? "0", 10) || 0;
         const nb = parseInt(b.card_number?.split("/")[0] ?? "0", 10) || 0;
         return na - nb;
+      }
+      if (key === "rarity") {
+        const diff = rarityRank(a.rarity) - rarityRank(b.rarity);
+        return diff !== 0 ? diff : a.name.localeCompare(b.name);
+      }
+      if (key === "type") {
+        const ta = a.types?.split(",")[0] ?? "";
+        const tb = b.types?.split(",")[0] ?? "";
+        return ta.localeCompare(tb) || a.name.localeCompare(b.name);
       }
       return 0;
     });
@@ -202,28 +256,46 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       set_name: result.setName,
       card_number: result.cardNumber,
       image_url: result.imageUrl,
+      rarity: result.rarity ?? null,
+      types: result.types ?? null,
     };
     try {
-      const prevLen = cards.length;
-      await addToBinder(binder.id, input);
-      setCards((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          user_id: "",
-          binder_id: binder.id,
-          tcg_api_id: input.tcg_api_id,
-          name: input.name,
-          set_name: input.set_name,
-          card_number: input.card_number,
-          image_url: input.image_url,
-          position: prev.length,
-          variant: null,
-          span_cols: 1,
-          created_at: new Date().toISOString(),
-        },
-      ]);
-      setPage(Math.floor(prevLen / cardsPerPage));
+      const { id } = await addToBinder(binder.id, input);
+      const newCard: BinderCard = {
+        id,
+        user_id: "",
+        binder_id: binder.id,
+        tcg_api_id: input.tcg_api_id,
+        name: input.name,
+        set_name: input.set_name,
+        card_number: input.card_number,
+        image_url: input.image_url,
+        position: 0,
+        variant: null,
+        span_cols: 1,
+        rarity: input.rarity,
+        types: input.types,
+        created_at: new Date().toISOString(),
+      };
+      setCards((prev) => {
+        const pageStart = safePage * cardsPerPage;
+        const onPage = prev.slice(pageStart, pageStart + cardsPerPage).length;
+        const insertAt =
+          addToCurrentPage && onPage < cardsPerPage
+            ? Math.min(pageStart + onPage, prev.length)
+            : prev.length;
+        const next = [...prev];
+        next.splice(insertAt, 0, newCard);
+        const repositioned = next.map((c, i) => ({ ...c, position: i }));
+        if (insertAt !== prev.length) {
+          reorderBinder(
+            binder.id,
+            repositioned.map((c) => c.id)
+          );
+        }
+        return repositioned;
+      });
+      if (!addToCurrentPage) setPage(Math.floor(cards.length / cardsPerPage));
       setSearchOpen(false);
     } finally {
       setAdding(false);
@@ -403,9 +475,47 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
               </h1>
             )}
           </div>
-          <p className="mt-1 text-sm text-ink-muted">
-            Monte sua vitrine de cartas — sua coleção, do seu jeito.
-          </p>
+          {editingDesc ? (
+            <div className="mt-1.5 flex items-start gap-1.5">
+              <textarea
+                autoFocus
+                rows={2}
+                value={descDraft}
+                onChange={(e) => setDescDraft(e.target.value)}
+                placeholder="Pra que é esse fichário? (opcional)"
+                className="w-full max-w-sm resize-none rounded-lg border-2 border-ink/15 bg-bg px-2.5 py-1.5 text-sm outline-none focus:border-orange-deep"
+              />
+              <button
+                onClick={handleSaveDesc}
+                aria-label="Salvar descrição"
+                className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-orange-deep text-white"
+              >
+                <Check className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : description ? (
+            <button
+              onClick={() => {
+                setDescDraft(description);
+                setEditingDesc(true);
+              }}
+              className="mt-1 max-w-md text-left text-sm text-ink-muted hover:text-ink"
+            >
+              {description}
+              <Pencil className="ml-1.5 inline h-3 w-3 align-[-1px]" />
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setDescDraft("");
+                setEditingDesc(true);
+              }}
+              className="mt-1 inline-flex items-center gap-1 text-sm text-ink-muted hover:text-ink"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Adicionar descrição
+            </button>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -463,18 +573,20 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
               ))}
             </div>
 
-            <button
-              onClick={() => setShowPrices((v) => !v)}
-              className={`flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition-colors ${
-                showPrices
-                  ? "border-orange bg-orange/10 text-orange-deep"
-                  : "border-ink/10 text-ink-muted hover:text-ink"
-              }`}
-              title="Preço de referência via Liga Pokémon"
-            >
-              <Tag className="h-3.5 w-3.5" />
-              Preços
-            </button>
+            {PRICES_ENABLED && (
+              <button
+                onClick={() => setShowPrices((v) => !v)}
+                className={`flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition-colors ${
+                  showPrices
+                    ? "border-orange bg-orange/10 text-orange-deep"
+                    : "border-ink/10 text-ink-muted hover:text-ink"
+                }`}
+                title="Preço de referência via Liga Pokémon"
+              >
+                <Tag className="h-3.5 w-3.5" />
+                Preços
+              </button>
+            )}
 
             <Select value={sortKey} onValueChange={(v) => v && handleSort(v)}>
               <SelectTrigger className="h-auto rounded-full border-2 border-ink/10 py-1.5">
@@ -612,7 +724,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                     </button>
                   )}
 
-                  {showPrices && (
+                  {PRICES_ENABLED && showPrices && (
                     <div className="absolute bottom-1 left-1">
                       <PriceBadge name={card.name} cardNumber={card.card_number} />
                     </div>
@@ -721,7 +833,17 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
               <Loader2 className="h-4 w-4 animate-spin" /> Adicionando...
             </div>
           ) : (
-            <CardSearch onSelect={handleSelect} />
+            <>
+              <CardSearch onSelect={handleSelect} />
+              {totalPages > 1 && (
+                <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border-2 border-ink/10 px-3 py-2">
+                  <span className="text-xs font-semibold text-ink">
+                    Adicionar à página atual ({safePage + 1})
+                  </span>
+                  <Switch checked={addToCurrentPage} onCheckedChange={setAddToCurrentPage} />
+                </label>
+              )}
+            </>
           )}
         </DialogContent>
       </Dialog>

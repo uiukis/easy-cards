@@ -68,6 +68,7 @@ export type Binder = {
   id: string;
   user_id: string;
   name: string;
+  description: string | null;
   grid_size: string;
   share_enabled: boolean;
   created_at: string;
@@ -85,5 +86,7 @@ export type BinderCard = {
   position: number;
   variant: string | null;
   span_cols: number;
+  rarity: string | null;
+  types: string | null;
   created_at: string;
 };

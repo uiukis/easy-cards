@@ -9,12 +9,15 @@ const GRID_SIZES: Record<string, { cols: number; rows: number }> = {
   "3x3": { cols: 3, rows: 3 },
   "4x3": { cols: 4, rows: 3 },
   "4x4": { cols: 4, rows: 4 },
+  "4x5": { cols: 4, rows: 5 },
+  "5x4": { cols: 5, rows: 4 },
 };
 
 const COLS_CLASS: Record<number, string> = {
   2: "grid-cols-2",
   3: "grid-cols-3",
   4: "grid-cols-4",
+  5: "grid-cols-5",
 };
 
 const VARIANT_ABBR: Record<string, string> = {
@@ -63,6 +66,9 @@ export default async function SharedBinderPage({
             {binder.name.toUpperCase()}
           </h1>
         </div>
+        {binder.description && (
+          <p className="mt-1 max-w-xl text-sm text-ink">{binder.description}</p>
+        )}
         <p className="mt-1 text-sm text-ink-muted">Fichário compartilhado — só para visualização.</p>
 
         {!cards || cards.length === 0 ? (

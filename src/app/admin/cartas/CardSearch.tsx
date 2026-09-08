@@ -10,6 +10,8 @@ export type SearchResult = {
   setName: string;
   imageUrl: string;
   cardNumber: string;
+  rarity?: string | null;
+  types?: string | null;
 };
 
 export function CardSearch({ onSelect }: { onSelect: (card: SearchResult) => void }) {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Plus, BookOpen, Trash2, Loader2 } from "lucide-react";
 import type { Binder } from "@/lib/supabase/types";
+import { BINDER_LIMITS } from "@/lib/features";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NewBinderDialog } from "./NewBinderDialog";
@@ -29,6 +30,8 @@ export function BinderListClient({ initial }: { initial: BinderWithPreview[] }) 
     setConfirmDeleteId(null);
   }
 
+  const atLimit = binders.length >= BINDER_LIMITS.user;
+
   return (
     <div>
       <div className="flex items-center justify-between">
@@ -38,14 +41,25 @@ export function BinderListClient({ initial }: { initial: BinderWithPreview[] }) 
             MEUS FICHÁRIOS
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            Monte quantas vitrines de cartas quiser — por set, por Pokémon ou do seu jeito.
+            Monte suas vitrines de cartas — por set, por Pokémon ou do seu jeito.
+            {" "}
+            <span className="whitespace-nowrap">
+              ({binders.length}/{BINDER_LIMITS.user} no beta)
+            </span>
           </p>
         </div>
-        <Button onClick={() => setNewOpen(true)}>
+        <Button onClick={() => setNewOpen(true)} disabled={atLimit}>
           <Plus className="h-4 w-4" />
           Novo fichário
         </Button>
       </div>
+
+      {atLimit && (
+        <p className="mt-3 rounded-xl border-2 border-ink/10 bg-surface-alt px-3 py-2 text-xs text-ink-muted">
+          Você chegou no limite de {BINDER_LIMITS.user} fichários durante o beta. Apague um pra criar
+          outro — o limite deve subir depois.
+        </p>
+      )}
 
       {binders.length === 0 ? (
         <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-halftone py-20 text-center">
@@ -89,7 +103,10 @@ export function BinderListClient({ initial }: { initial: BinderWithPreview[] }) 
                 <p className="mt-3 truncate font-display text-lg tracking-wide text-ink">
                   {b.name.toUpperCase()}
                 </p>
-                <p className="text-xs text-ink-muted">
+                {b.description && (
+                  <p className="mt-0.5 line-clamp-2 text-xs text-ink-muted">{b.description}</p>
+                )}
+                <p className="mt-0.5 text-xs text-ink-muted">
                   {b.cardCount} {b.cardCount === 1 ? "carta" : "cartas"}
                 </p>
               </Link>

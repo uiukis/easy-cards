@@ -10,6 +10,8 @@ type TcgApiCard = {
   number: string;
   images: { small: string };
   set: { name: string; printedTotal: number };
+  rarity?: string;
+  types?: string[];
 };
 
 function sleep(ms: number) {
@@ -57,6 +59,8 @@ export async function GET(request: Request) {
       setName: c.set.name,
       imageUrl: c.images.small,
       cardNumber: `${c.number}/${c.set.printedTotal}`,
+      rarity: c.rarity ?? null,
+      types: c.types?.join(",") ?? null,
     }));
 
     const groupCounts = new Map<string, number>();

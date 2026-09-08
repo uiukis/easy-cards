@@ -30,6 +30,8 @@ type PokemonCard = {
   setName: string;
   imageUrl: string;
   cardNumber: string;
+  rarity?: string | null;
+  types?: string | null;
 };
 
 type Mode = "choose" | "blank" | "set" | "pokemon";
@@ -41,6 +43,8 @@ function toNewBinderCard(c: PokemonCard): NewBinderCard {
     set_name: c.setName,
     card_number: c.cardNumber,
     image_url: c.imageUrl,
+    rarity: c.rarity ?? null,
+    types: c.types ?? null,
   };
 }
 
@@ -51,6 +55,8 @@ export function NewBinderDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
   // blank
   const [blankName, setBlankName] = useState("Meu Fichário");
+  const [blankDesc, setBlankDesc] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   // set wizard
   const [sets, setSets] = useState<TcgSet[]>([]);
@@ -72,7 +78,9 @@ export function NewBinderDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
   function reset() {
     setMode("choose");
+    setError(null);
     setBlankName("Meu Fichário");
+    setBlankDesc("");
     setSetQuery("");
     setSelectedSet(null);
     setSetCards([]);
@@ -149,16 +157,25 @@ export function NewBinderDialog({ open, onOpenChange }: { open: boolean; onOpenC
 
   const selectedPokemonCards = pokemonCards.filter((c) => selectedGroups.has(c.name));
 
-  async function handleCreate(name: string, gridSize: string, cards?: PokemonCard[]) {
+  async function handleCreate(
+    name: string,
+    gridSize: string,
+    cards?: PokemonCard[],
+    description?: string
+  ) {
     setCreating(true);
+    setError(null);
     try {
       const binder = await createBinder({
         name: name.trim() || "Meu Fichário",
+        description,
         gridSize,
         cards: cards?.map(toNewBinderCard),
       });
       onOpenChange(false);
       router.push(`/fichario/${binder.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Não deu pra criar o fichário.");
     } finally {
       setCreating(false);
     }
@@ -228,10 +245,21 @@ export function NewBinderDialog({ open, onOpenChange }: { open: boolean; onOpenC
                 placeholder="Ex: Trade binder"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label>Descrição (opcional)</Label>
+              <textarea
+                rows={2}
+                value={blankDesc}
+                onChange={(e) => setBlankDesc(e.target.value)}
+                placeholder="Pra que é esse fichário?"
+                className="w-full resize-none rounded-lg border-2 border-ink/15 bg-bg px-2.5 py-1.5 text-sm outline-none focus:border-orange-deep"
+              />
+            </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
             <Button
               className="w-full"
               disabled={creating}
-              onClick={() => handleCreate(blankName, "3x3")}
+              onClick={() => handleCreate(blankName, "3x3", undefined, blankDesc)}
             >
               {creating && <Loader2 className="h-4 w-4 animate-spin" />}
               Criar fichário
@@ -302,6 +330,7 @@ export function NewBinderDialog({ open, onOpenChange }: { open: boolean; onOpenC
                   <Label>Nome do fichário</Label>
                   <Input value={setName} onChange={(e) => setSetName(e.target.value)} />
                 </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <Button
                   className="w-full"
                   disabled={creating || setCardsLoading || setCards.length === 0}
@@ -364,6 +393,7 @@ export function NewBinderDialog({ open, onOpenChange }: { open: boolean; onOpenC
                   <Label>Nome do fichário</Label>
                   <Input value={pokemonName} onChange={(e) => setPokemonName(e.target.value)} />
                 </div>
+                {error && <p className="text-sm text-destructive">{error}</p>}
                 <Button
                   className="w-full"
                   disabled={creating || selectedPokemonCards.length === 0}
