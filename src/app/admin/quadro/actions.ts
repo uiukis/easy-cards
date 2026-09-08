@@ -15,14 +15,12 @@ export async function createSupporter(input: {
   name: string;
   instagram: string;
   image_url: string;
-  tier: string;
 }) {
   const supabase = await createClient();
   const { error } = await supabase.from("supporters").insert({
     name: input.name,
     instagram: input.instagram || null,
     image_url: input.image_url || null,
-    tier: input.tier || null,
   });
   if (error) throw new Error(error.message);
   refresh();

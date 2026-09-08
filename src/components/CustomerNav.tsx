@@ -5,11 +5,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Menu, X, Wallet, BookOpen } from "lucide-react";
+import { Menu, X, Wallet, BookOpen, Home } from "lucide-react";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const LINKS = [
+  { href: "/", label: "Início", icon: Home },
   { href: "/minhas-cartas", label: "Minhas cartas", icon: Wallet },
   { href: "/fichario", label: "Fichário", icon: BookOpen },
 ];
@@ -22,7 +23,7 @@ export function CustomerNav() {
 
   return (
     <div className="mb-6 flex items-center justify-between">
-      <Link href="/minhas-cartas" className="flex items-center gap-2 transition-transform hover:scale-105">
+      <Link href="/" className="flex items-center gap-2 transition-transform hover:scale-105">
         <Image src="/brand/icon-square.png" alt="Easy Cards" width={32} height={32} className="rounded-full" />
         <span className="text-comic-shadow-sm font-display text-lg tracking-wide text-orange-deep">
           EASY <span className="text-orange">CARDS</span>

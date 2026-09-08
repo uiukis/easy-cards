@@ -80,6 +80,14 @@ export async function updateBinderDescription(id: string, description: string) {
   revalidatePath(`/b/${id}`);
 }
 
+export async function updatePageLabels(id: string, labels: Record<string, string>) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("binders").update({ page_labels: labels }).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+  revalidatePath(`/b/${id}`);
+}
+
 export async function deleteBinder(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("binders").delete().eq("id", id);

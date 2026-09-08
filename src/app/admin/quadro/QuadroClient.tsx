@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Handshake, Newspaper, Plus, Trash2 } from "lucide-react";
+import { Handshake, Newspaper, Plus, Trash2, Eye } from "lucide-react";
 import type { Supporter, PressMention } from "@/lib/supabase/types";
 import {
   createSupporter,
@@ -13,26 +13,26 @@ import {
   deletePressMention,
 } from "./actions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
+import { PressCard } from "@/components/PressSection";
+import { InstagramIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
-const TIER_OPTIONS = [
-  { value: "leilao_misto", label: "Leilão misto (20% de comissão)" },
-  { value: "leilao_exclusivo", label: "Leilão exclusivo (35% de comissão)" },
-  { value: "outro", label: "Outro / parceria pontual" },
-];
-const TIER_LABEL: Record<string, string> = Object.fromEntries(
-  TIER_OPTIONS.map((t) => [t.value, t.label])
-);
+function PreviewFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-ink-muted">
+        <Eye className="h-3.5 w-3.5" />
+        Prévia do site
+      </div>
+      <div className="mt-2 rounded-2xl border-2 border-dashed border-ink/15 bg-halftone bg-bg p-5">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function QuadroClient({
   initialSupporters,
@@ -43,33 +43,30 @@ export function QuadroClient({
 }) {
   return (
     <div>
-      <AdminPageHeader
-        title="QUADRO"
-        subtitle="Apoiadores e imprensa visíveis no site."
-      />
+      <AdminPageHeader title="QUADRO" subtitle="Apoiadores e imprensa visíveis no site." />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
       >
-      <Tabs defaultValue="apoiadores" className="mt-6">
-        <TabsList>
-          <TabsTrigger value="apoiadores">
-            <Handshake className="h-4 w-4" /> Apoiadores
-          </TabsTrigger>
-          <TabsTrigger value="imprensa">
-            <Newspaper className="h-4 w-4" /> Imprensa
-          </TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="apoiadores" className="mt-6">
+          <TabsList>
+            <TabsTrigger value="apoiadores">
+              <Handshake className="h-4 w-4" /> Apoiadores
+            </TabsTrigger>
+            <TabsTrigger value="imprensa">
+              <Newspaper className="h-4 w-4" /> Imprensa
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="apoiadores" className="mt-4">
-          <ApoiadoresTab initial={initialSupporters} />
-        </TabsContent>
-        <TabsContent value="imprensa" className="mt-4">
-          <ImprensaTab initial={initialPressMentions} />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="apoiadores" className="mt-4">
+            <ApoiadoresTab initial={initialSupporters} />
+          </TabsContent>
+          <TabsContent value="imprensa" className="mt-4">
+            <ImprensaTab initial={initialPressMentions} />
+          </TabsContent>
+        </Tabs>
       </motion.div>
     </div>
   );
@@ -80,21 +77,19 @@ function ApoiadoresTab({ initial }: { initial: Supporter[] }) {
   const [name, setName] = useState("");
   const [instagram, setInstagram] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [tier, setTier] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     setSaving(true);
-    await createSupporter({ name, instagram, image_url: imageUrl, tier });
+    await createSupporter({ name, instagram, image_url: imageUrl });
     setItems((prev) => [
       {
         id: crypto.randomUUID(),
         name,
         instagram: instagram || null,
         image_url: imageUrl || null,
-        tier: tier || null,
         active: true,
         sort_order: 0,
         created_at: new Date().toISOString(),
@@ -104,101 +99,143 @@ function ApoiadoresTab({ initial }: { initial: Supporter[] }) {
     setName("");
     setInstagram("");
     setImageUrl("");
-    setTier("");
     setSaving(false);
   }
 
-  return (
-    <div className="max-w-lg space-y-4">
-      <Card>
-        <CardContent>
-          <form onSubmit={handleAdd} className="space-y-2">
-            <Input
-              placeholder="Nome do apoiador"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <Input
-              placeholder="Instagram (URL)"
-              value={instagram}
-              onChange={(e) => setInstagram(e.target.value)}
-            />
-            <Input
-              placeholder="URL da foto (ex: link da foto de perfil do Instagram dele)"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-            <Select value={tier} onValueChange={(v) => setTier(v ?? "")}>
-              <SelectTrigger className="w-full">
-                <SelectValue>{(v: string) => TIER_LABEL[v] ?? "Categoria da parceria"}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {TIER_OPTIONS.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
-                    {t.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button type="submit" disabled={saving}>
-              <Plus className="h-4 w-4" /> Adicionar
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+  const active = items.filter((s) => s.active);
 
-      <ul className="space-y-2">
-        {items.map((s) => (
-          <li key={s.id}>
-            <Card>
-              <CardContent className="flex items-center justify-between gap-3">
-                <div className={`flex items-center gap-3 ${s.active ? "" : "opacity-50"}`}>
+  return (
+    <div className="space-y-6">
+      <div className="max-w-lg space-y-4">
+        <Card>
+          <CardContent>
+            <form onSubmit={handleAdd} className="space-y-2">
+              <Input
+                placeholder="Nome do apoiador"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <Input
+                placeholder="Instagram (URL)"
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+              />
+              <Input
+                placeholder="URL da foto (ex: foto de perfil do Instagram dele)"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
+              <Button type="submit" disabled={saving}>
+                <Plus className="h-4 w-4" /> Adicionar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-muted">
+            {items.length} {items.length === 1 ? "apoiador" : "apoiadores"}
+          </p>
+          {items.length === 0 ? (
+            <p className="rounded-xl border-2 border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink-muted">
+              Nenhum apoiador cadastrado ainda.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {items.map((s) => (
+                <li key={s.id}>
+                  <Card>
+                    <CardContent className="flex items-center justify-between gap-3">
+                      <div className={`flex items-center gap-3 ${s.active ? "" : "opacity-50"}`}>
+                        {s.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
+                          <img
+                            src={s.image_url}
+                            alt={s.name}
+                            className="h-10 w-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-alt font-display text-sm text-orange-deep">
+                            {s.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-ink">{s.name}</p>
+                          {!s.active && <p className="text-xs text-ink-muted">oculto no site</p>}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            await toggleSupporter(s.id, !s.active);
+                            setItems((prev) =>
+                              prev.map((x) => (x.id === s.id ? { ...x, active: !x.active } : x))
+                            );
+                          }}
+                        >
+                          {s.active ? "ocultar" : "mostrar"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={async () => {
+                            await deleteSupporter(s.id);
+                            setItems((prev) => prev.filter((x) => x.id !== s.id));
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <PreviewFrame>
+        {active.length === 0 ? (
+          <p className="py-4 text-center text-sm text-ink-muted">
+            Nada aparece no site enquanto não tiver apoiador ativo.
+          </p>
+        ) : (
+          <div className="text-center">
+            <Handshake className="mx-auto h-7 w-7 text-orange-deep" />
+            <h3 className="mt-3 font-display text-2xl leading-tight text-ink">
+              QUEM JÁ APOIA A EASY CARDS
+            </h3>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-5">
+              {active.map((s) => (
+                <div key={s.id} className="flex flex-col items-center gap-2">
                   {s.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
                     <img
                       src={s.image_url}
                       alt={s.name}
-                      className="h-10 w-10 rounded-full object-cover"
+                      className="h-16 w-16 rounded-full border-2 border-ink/10 object-cover"
                     />
                   ) : (
-                    <div className="h-10 w-10 rounded-full bg-surface-alt" />
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-ink/10 bg-surface font-display text-lg text-orange-deep">
+                      {s.name.charAt(0).toUpperCase()}
+                    </div>
                   )}
-                  <div>
-                    <p className="text-sm font-semibold text-ink">{s.name}</p>
-                    {s.tier && (
-                      <p className="text-xs text-ink-muted">{TIER_LABEL[s.tier] ?? s.tier}</p>
-                    )}
-                  </div>
+                  <span className="flex items-center gap-1 text-xs font-semibold text-ink">
+                    {s.name}
+                    {s.instagram && <InstagramIcon className="h-3 w-3 text-ink-muted" />}
+                  </span>
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      await toggleSupporter(s.id, !s.active);
-                      setItems((prev) =>
-                        prev.map((x) => (x.id === s.id ? { ...x, active: !x.active } : x))
-                      );
-                    }}
-                  >
-                    {s.active ? "desativar" : "ativar"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={async () => {
-                      await deleteSupporter(s.id);
-                      setItems((prev) => prev.filter((x) => x.id !== s.id));
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </li>
-        ))}
-      </ul>
+              ))}
+            </div>
+            <p className="mt-4 text-[11px] text-ink-muted">
+              Aparece na página <span className="font-semibold">/apoiador</span>.
+            </p>
+          </div>
+        )}
+      </PreviewFrame>
     </div>
   );
 }
@@ -258,107 +295,155 @@ function ImprensaTab({ initial }: { initial: PressMention[] }) {
     setSaving(false);
   }
 
-  return (
-    <div className="max-w-lg space-y-4">
-      <Card>
-        <CardContent>
-          <form onSubmit={handleAdd} className="space-y-2">
-            <Input
-              placeholder="Título da matéria"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-            <Input placeholder="Link da matéria" value={url} onChange={(e) => setUrl(e.target.value)} />
-            <Input
-              placeholder="Imagem de capa (URL)"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="Veículo (ex: Tudo de Novo)"
-                value={outlet}
-                onChange={(e) => setOutlet(e.target.value)}
-              />
-              <Input
-                placeholder="Instagram do veículo"
-                value={outletInstagram}
-                onChange={(e) => setOutletInstagram(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="Jornalista"
-                value={journalist}
-                onChange={(e) => setJournalist(e.target.value)}
-              />
-              <Input
-                placeholder="Instagram do jornalista"
-                value={journalistInstagram}
-                onChange={(e) => setJournalistInstagram(e.target.value)}
-              />
-            </div>
-            <Input
-              type="date"
-              value={publishedDate}
-              onChange={(e) => setPublishedDate(e.target.value)}
-            />
-            <Button type="submit" disabled={saving}>
-              <Plus className="h-4 w-4" /> Adicionar
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+  const active = items.filter((p) => p.active);
 
-      <ul className="space-y-2">
-        {items.map((p) => (
-          <li key={p.id}>
-            <Card>
-              <CardContent className="flex items-center justify-between gap-3">
-                <div className={`flex items-center gap-3 ${p.active ? "" : "opacity-50"}`}>
-                  {p.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
-                    <img src={p.image_url} alt={p.title} className="h-12 w-12 rounded-lg object-cover" />
-                  ) : (
-                    <div className="h-12 w-12 rounded-lg bg-surface-alt" />
-                  )}
-                  <div className="min-w-0">
-                    <p className="line-clamp-1 text-sm font-semibold text-ink">{p.title}</p>
-                    <p className="text-xs text-ink-muted">
-                      {p.outlet}
-                      {p.journalist && ` · ${p.journalist}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      await togglePressMention(p.id, !p.active);
-                      setItems((prev) =>
-                        prev.map((x) => (x.id === p.id ? { ...x, active: !x.active } : x))
-                      );
-                    }}
-                  >
-                    {p.active ? "desativar" : "ativar"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={async () => {
-                      await deletePressMention(p.id);
-                      setItems((prev) => prev.filter((x) => x.id !== p.id));
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </li>
-        ))}
-      </ul>
+  return (
+    <div className="space-y-6">
+      <div className="max-w-lg space-y-4">
+        <Card>
+          <CardContent>
+            <form onSubmit={handleAdd} className="space-y-2">
+              <Input
+                placeholder="Título da matéria"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+              <Input
+                placeholder="Link da matéria"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+              />
+              <Input
+                placeholder="Imagem de capa (URL)"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Veículo (ex: Tudo de Novo)"
+                  value={outlet}
+                  onChange={(e) => setOutlet(e.target.value)}
+                />
+                <Input
+                  placeholder="Instagram do veículo"
+                  value={outletInstagram}
+                  onChange={(e) => setOutletInstagram(e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  placeholder="Jornalista"
+                  value={journalist}
+                  onChange={(e) => setJournalist(e.target.value)}
+                />
+                <Input
+                  placeholder="Instagram do jornalista"
+                  value={journalistInstagram}
+                  onChange={(e) => setJournalistInstagram(e.target.value)}
+                />
+              </div>
+              <Input
+                type="date"
+                value={publishedDate}
+                onChange={(e) => setPublishedDate(e.target.value)}
+              />
+              <Button type="submit" disabled={saving}>
+                <Plus className="h-4 w-4" /> Adicionar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-muted">
+            {items.length} {items.length === 1 ? "matéria" : "matérias"}
+          </p>
+          {items.length === 0 ? (
+            <p className="rounded-xl border-2 border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink-muted">
+              Nenhuma matéria cadastrada ainda.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {items.map((p) => (
+                <li key={p.id}>
+                  <Card>
+                    <CardContent className="flex items-center justify-between gap-3">
+                      <div className={`flex items-center gap-3 ${p.active ? "" : "opacity-50"}`}>
+                        {p.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
+                          <img
+                            src={p.image_url}
+                            alt={p.title}
+                            className="h-12 w-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="h-12 w-12 rounded-lg bg-surface-alt" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="line-clamp-1 text-sm font-semibold text-ink">{p.title}</p>
+                          <p className="text-xs text-ink-muted">
+                            {p.outlet}
+                            {p.journalist && ` · ${p.journalist}`}
+                            {!p.active && " · oculto no site"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            await togglePressMention(p.id, !p.active);
+                            setItems((prev) =>
+                              prev.map((x) => (x.id === p.id ? { ...x, active: !x.active } : x))
+                            );
+                          }}
+                        >
+                          {p.active ? "ocultar" : "mostrar"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={async () => {
+                            await deletePressMention(p.id);
+                            setItems((prev) => prev.filter((x) => x.id !== p.id));
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <PreviewFrame>
+        {active.length === 0 ? (
+          <p className="py-4 text-center text-sm text-ink-muted">
+            A seção some do site enquanto não tiver matéria ativa.
+          </p>
+        ) : (
+          <div>
+            <span className="font-comic text-sm tracking-wide text-orange-deep">★ Na mídia</span>
+            <h3 className="mt-2 font-display text-2xl leading-tight text-ink">
+              QUEM JÁ FALOU SOBRE A GENTE.
+            </h3>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {active.slice(0, 3).map((m) => (
+                <PressCard key={m.id} mention={m} />
+              ))}
+            </div>
+            <p className="mt-4 text-[11px] text-ink-muted">
+              As 3 mais recentes aparecem na home; todas em{" "}
+              <span className="font-semibold">/imprensa</span>.
+            </p>
+          </div>
+        )}
+      </PreviewFrame>
     </div>
   );
 }

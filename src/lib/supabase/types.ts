@@ -43,7 +43,6 @@ export type Supporter = {
   name: string;
   instagram: string | null;
   image_url: string | null;
-  tier: string | null;
   active: boolean;
   sort_order: number;
   created_at: string;
@@ -71,6 +70,7 @@ export type Binder = {
   description: string | null;
   grid_size: string;
   share_enabled: boolean;
+  page_labels: Record<string, string>;
   created_at: string;
 };
 
