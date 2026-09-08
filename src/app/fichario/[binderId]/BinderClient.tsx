@@ -18,6 +18,13 @@ import {
   Share2,
   ArrowDownUp,
   Copy,
+  CheckSquare,
+  X,
+  FolderInput,
+  Maximize2,
+  Minimize2,
+  Rows3,
+  Printer,
 } from "lucide-react";
 import type { Binder, BinderCard } from "@/lib/supabase/types";
 import { CardSearch, type SearchResult } from "@/app/admin/cartas/CardSearch";
@@ -29,12 +36,19 @@ import {
   renameBinder,
   setBinderShared,
   reorderBinder,
+  updateCardVariant,
+  updateCardSpan,
+  bulkDeleteCards,
+  moveCardsToBinder,
+  listOtherBinders,
+  reorderPages,
 } from "../actions";
 import { PriceBadge } from "../PriceBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
@@ -64,6 +78,26 @@ const COLS_CLASS: Record<number, string> = {
   4: "grid-cols-4",
 };
 
+const VARIANT_LABEL: Record<string, string> = {
+  normal: "Normal",
+  reverse_holo: "Reverse Holo",
+  holo: "Holo",
+  first_edition: "1ª Edição",
+};
+
+const VARIANT_ABBR: Record<string, string> = {
+  normal: "",
+  reverse_holo: "RH",
+  holo: "H",
+  first_edition: "1ED",
+};
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out.length > 0 ? out : [[]];
+}
+
 export function BinderClient({ binder, initial }: { binder: Binder; initial: BinderCard[] }) {
   const [name, setName] = useState(binder.name);
   const [editingName, setEditingName] = useState(false);
@@ -86,11 +120,22 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const shareUrl =
     typeof window !== "undefined" ? `${window.location.origin}/b/${binder.id}` : `/b/${binder.id}`;
 
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [otherBinders, setOtherBinders] = useState<{ id: string; name: string }[]>([]);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const [swapFrom, setSwapFrom] = useState<number | null>(null);
+
   const { cols, rows } = GRID_SIZES[gridSize];
   const cardsPerPage = cols * rows;
-  const totalPages = Math.max(1, Math.ceil(cards.length / cardsPerPage));
+  const pages = chunk(cards, cardsPerPage);
+  const totalPages = pages.length;
   const safePage = Math.min(page, totalPages - 1);
-  const pageCards = cards.slice(safePage * cardsPerPage, safePage * cardsPerPage + cardsPerPage);
+  const pageCards = pages[safePage] ?? [];
   const emptySlots = cardsPerPage - pageCards.length;
 
   function goToPage(p: number) {
@@ -173,6 +218,8 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
           card_number: input.card_number,
           image_url: input.image_url,
           position: prev.length,
+          variant: null,
+          span_cols: 1,
           created_at: new Date().toISOString(),
         },
       ]);
@@ -217,17 +264,89 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     swapBinderCards(sourceId, targetId);
   }
 
+  function handleVariantChange(cardId: string, variant: string) {
+    const value = variant === "normal" ? null : variant;
+    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, variant: value } : c)));
+    updateCardVariant(cardId, value);
+  }
+
+  function handleToggleSpan(cardId: string, current: number) {
+    const next = current > 1 ? 1 : 2;
+    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, span_cols: next } : c)));
+    updateCardSpan(cardId, next);
+  }
+
+  function toggleSelectMode() {
+    if (selectMode) {
+      setSelectMode(false);
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectMode(true);
+    setSelectedIds(new Set());
+    listOtherBinders(binder.id).then(setOtherBinders);
+  }
+
+  function toggleCardSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDelete() {
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    await bulkDeleteCards(ids);
+    setCards((prev) => prev.filter((c) => !selectedIds.has(c.id)));
+    setSelectedIds(new Set());
+    setBulkBusy(false);
+    setConfirmBulkDelete(false);
+  }
+
+  async function handleBulkMove(targetId: string) {
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    await moveCardsToBinder(ids, targetId);
+    setCards((prev) => prev.filter((c) => !selectedIds.has(c.id)));
+    setSelectedIds(new Set());
+    setBulkBusy(false);
+    setMoveOpen(false);
+  }
+
+  function handleOverviewClick(pageIndex: number) {
+    if (swapFrom === null) {
+      setSwapFrom(pageIndex);
+      return;
+    }
+    if (swapFrom === pageIndex) {
+      setSwapFrom(null);
+      return;
+    }
+    const newPages = [...pages];
+    [newPages[swapFrom], newPages[pageIndex]] = [newPages[pageIndex], newPages[swapFrom]];
+    const flat = newPages.flat();
+    setCards(flat.map((c, i) => ({ ...c, position: i })));
+    reorderPages(
+      binder.id,
+      newPages.map((p) => p.map((c) => c.id))
+    );
+    setSwapFrom(null);
+  }
+
   return (
     <div>
       <Link
         href="/fichario"
-        className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-ink"
+        className="mb-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ink-muted hover:text-ink print:hidden"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Todos os fichários
       </Link>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
           <div className="flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-primary" />
@@ -271,7 +390,22 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
             Monte sua vitrine de cartas — sua coleção, do seu jeito.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={selectMode ? "default" : "outline"}
+            onClick={toggleSelectMode}
+          >
+            {selectMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+            {selectMode ? "Cancelar" : "Selecionar"}
+          </Button>
+          <Button variant="outline" onClick={() => setOverviewOpen(true)}>
+            <Rows3 className="h-4 w-4" />
+            Páginas
+          </Button>
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer className="h-4 w-4" />
+            Exportar PDF
+          </Button>
           <Button variant="outline" onClick={() => setShareOpen(true)}>
             <Share2 className="h-4 w-4" />
             Compartilhar
@@ -284,7 +418,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       </div>
 
       {cards.length === 0 ? (
-        <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-halftone py-20 text-center">
+        <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-halftone py-20 text-center print:hidden">
           <BookOpen className="h-10 w-10 text-ink-muted" />
           <p className="text-sm text-ink-muted">Esse fichário tá vazio. Bora adicionar a primeira carta?</p>
           <Button onClick={() => setSearchOpen(true)} variant="secondary">
@@ -294,7 +428,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         </div>
       ) : (
         <>
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
             <div className="flex items-center gap-1.5 rounded-full border-2 border-ink/10 bg-surface p-1">
               <LayoutGrid className="ml-2 h-3.5 w-3.5 text-ink-muted" />
               {Object.entries(GRID_SIZES).map(([key, g]) => (
@@ -369,7 +503,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: "easeOut" }}
-            className={`mt-4 grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8`}
+            className={`mt-4 grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8 print:hidden`}
           >
             <AnimatePresence initial={false}>
               {pageCards.map((card, i) => (
@@ -380,16 +514,22 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.85 }}
                   transition={{ duration: 0.3, delay: i < 12 ? i * 0.025 : 0 }}
-                  draggable
+                  draggable={!selectMode}
                   onDragStart={() => setDraggedId(card.id)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
                     handleDrop(card.id);
                   }}
-                  className={`group relative aspect-[5/7] cursor-grab overflow-hidden rounded-lg border-2 border-ink/10 bg-bg shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${
-                    draggedId === card.id ? "opacity-40" : ""
-                  }`}
+                  onClick={() => selectMode && toggleCardSelected(card.id)}
+                  style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
+                  className={`group relative aspect-[5/7] overflow-hidden rounded-lg border-2 bg-bg shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md ${
+                    selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
+                  } ${
+                    selectedIds.has(card.id)
+                      ? "border-orange-deep ring-2 ring-orange-deep"
+                      : "border-ink/10"
+                  } ${draggedId === card.id ? "opacity-40" : ""}`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
                   <img
@@ -398,21 +538,76 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                     draggable={false}
                     className="h-full w-full object-cover"
                   />
-                  <button
-                    onClick={() => handleRemove(card.id)}
-                    disabled={removingId === card.id}
-                    aria-label={`Remover ${card.name}`}
-                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 disabled:opacity-100"
-                  >
-                    {removingId === card.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                  </button>
+
+                  {selectMode ? (
+                    <div
+                      className={`absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                        selectedIds.has(card.id)
+                          ? "border-orange-deep bg-orange-deep text-white"
+                          : "border-white/70 bg-black/40"
+                      }`}
+                    >
+                      {selectedIds.has(card.id) && <Check className="h-3 w-3" />}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleSpan(card.id, card.span_cols);
+                      }}
+                      aria-label={card.span_cols > 1 ? "Desfazer carta grande" : "Marcar como carta grande"}
+                      title={card.span_cols > 1 ? "Desfazer carta grande" : "Carta grande (2 espaços)"}
+                      className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
+                    >
+                      {card.span_cols > 1 ? (
+                        <Minimize2 className="h-3.5 w-3.5" />
+                      ) : (
+                        <Maximize2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  )}
+
+                  {!selectMode && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemove(card.id);
+                      }}
+                      disabled={removingId === card.id}
+                      aria-label={`Remover ${card.name}`}
+                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 disabled:opacity-100"
+                    >
+                      {removingId === card.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  )}
+
                   {showPrices && (
                     <div className="absolute bottom-1 left-1">
                       <PriceBadge name={card.name} cardNumber={card.card_number} />
+                    </div>
+                  )}
+
+                  {!selectMode && (
+                    <div onClick={(e) => e.stopPropagation()} className="absolute bottom-1 right-1">
+                      <Select
+                        value={card.variant ?? "normal"}
+                        onValueChange={(v) => v && handleVariantChange(card.id, v)}
+                      >
+                        <SelectTrigger className="h-5 min-w-0 gap-0.5 rounded-full border-0 bg-black/60 px-1.5 py-0 text-[9px] font-bold text-white backdrop-blur-sm [&_svg]:h-2.5 [&_svg]:w-2.5">
+                          <SelectValue>{(v: string) => VARIANT_ABBR[v] || "···"}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(VARIANT_LABEL).map(([key, label]) => (
+                            <SelectItem key={key} value={key}>
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
                 </motion.div>
@@ -431,7 +626,49 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
               />
             ))}
           </motion.div>
+
+          {/* print-only: every page, one per sheet */}
+          <div className="hidden print:block">
+            {pages.map((pc, pi) => (
+              <div
+                key={pi}
+                className={`grid ${COLS_CLASS[cols]} gap-2 ${pi < pages.length - 1 ? "break-after-page" : ""}`}
+              >
+                {pc.map((card) => (
+                  <div
+                    key={card.id}
+                    style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
+                    className="aspect-[5/7] overflow-hidden rounded-lg border border-ink/20"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
+                    <img src={card.image_url} alt={card.name} className="h-full w-full object-cover" />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </>
+      )}
+
+      {selectMode && selectedIds.size > 0 && (
+        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 print:hidden">
+          <div className="flex items-center gap-3 rounded-full border-2 border-ink/10 bg-surface px-4 py-2.5 shadow-xl">
+            <span className="text-sm font-bold text-ink">{selectedIds.size} selecionada(s)</span>
+            <Button size="sm" variant="outline" onClick={() => setMoveOpen(true)} disabled={bulkBusy}>
+              <FolderInput className="h-3.5 w-3.5" />
+              Mover
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setConfirmBulkDelete(true)}
+              disabled={bulkBusy}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Excluir
+            </Button>
+          </div>
+        </div>
       )}
 
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
@@ -474,6 +711,91 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={moveOpen} onOpenChange={setMoveOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display tracking-wide">MOVER PARA...</DialogTitle>
+          </DialogHeader>
+          {otherBinders.length === 0 ? (
+            <p className="text-sm text-ink-muted">
+              Você precisa de outro fichário pra mover cartas. Crie um novo primeiro.
+            </p>
+          ) : (
+            <div className="space-y-1.5">
+              {otherBinders.map((b) => (
+                <button
+                  key={b.id}
+                  onClick={() => handleBulkMove(b.id)}
+                  disabled={bulkBusy}
+                  className="flex w-full items-center justify-between rounded-lg border-2 border-ink/10 px-3 py-2 text-left text-sm font-semibold text-ink hover:bg-surface-alt disabled:opacity-50"
+                >
+                  {b.name}
+                  {bulkBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={overviewOpen} onOpenChange={(v) => { setOverviewOpen(v); if (!v) setSwapFrom(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display tracking-wide">VISÃO GERAL DAS PÁGINAS</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-ink-muted">
+            Clique numa página pra abrir. Clique em duas seguidas pra trocar elas de lugar.
+          </p>
+          <div className="grid max-h-96 grid-cols-3 gap-3 overflow-y-auto sm:grid-cols-4">
+            {pages.map((pc, pi) => (
+              <button
+                key={pi}
+                onClick={() => {
+                  if (swapFrom !== null) {
+                    handleOverviewClick(pi);
+                  } else {
+                    setPage(pi);
+                    setOverviewOpen(false);
+                  }
+                }}
+                className={`rounded-xl border-2 p-2 text-left transition-colors ${
+                  swapFrom === pi ? "border-orange-deep bg-orange/10" : "border-ink/10 hover:bg-surface-alt"
+                }`}
+              >
+                <div className="grid grid-cols-2 gap-0.5">
+                  {pc.slice(0, 4).map((c) => (
+                    // eslint-disable-next-line @next/next/no-img-element -- external card art URLs
+                    <img key={c.id} src={c.image_url} alt="" className="aspect-[5/7] w-full rounded-sm object-cover" />
+                  ))}
+                  {Array.from({ length: Math.max(0, 4 - pc.length) }).map((_, i) => (
+                    <div key={`e-${i}`} className="aspect-[5/7] w-full rounded-sm bg-surface-alt" />
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs font-bold text-ink">Página {pi + 1}</p>
+                <p className="text-[10px] text-ink-muted">{pc.length} cartas</p>
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setSwapFrom(null)}
+            className={`text-xs font-semibold text-ink-muted hover:text-ink ${swapFrom === null ? "invisible" : ""}`}
+          >
+            Cancelar troca
+          </button>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDialog
+        open={confirmBulkDelete}
+        onOpenChange={setConfirmBulkDelete}
+        title={`Remover ${selectedIds.size} carta(s)?`}
+        description="Essa ação não pode ser desfeita."
+        confirmLabel="Remover"
+        destructive
+        loading={bulkBusy}
+        onConfirm={handleBulkDelete}
+      />
     </div>
   );
 }

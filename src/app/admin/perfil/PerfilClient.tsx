@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion } from "motion/react";
 import { Loader2, Sparkles } from "lucide-react";
 import type { Profile } from "@/lib/supabase/types";
 import { updateOwnProfile } from "./actions";
@@ -34,7 +35,12 @@ export function PerfilClient({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div className="max-w-md">
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="max-w-md"
+    >
       <h1 className="font-display text-2xl text-ink">MEU PERFIL</h1>
       <p className="mt-1 text-sm text-ink-muted">{profile.phone}</p>
 
@@ -67,7 +73,7 @@ export function PerfilClient({ profile }: { profile: Profile }) {
         </Button>
         {saved && <p className="text-sm text-teal">Salvo!</p>}
       </form>
-    </div>
+    </motion.div>
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import { Loader2, AlertTriangle } from "lucide-react";
 import type { Profile, UserRole } from "@/lib/supabase/types";
 import { updateUserRole } from "./actions";
@@ -51,7 +52,11 @@ export function UsuariosClient({
   }
 
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
       <h1 className="font-display text-2xl text-ink">USUÁRIOS</h1>
       <p className="mt-1 text-sm text-ink-muted">
         {canEditRoles
@@ -121,6 +126,6 @@ export function UsuariosClient({
           </TableBody>
         </Table>
       </div>
-    </div>
+    </motion.div>
   );
 }

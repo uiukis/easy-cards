@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import { Plus, Pencil, Trash2, Loader2, HandCoins, ArrowLeft, ImageOff } from "lucide-react";
 import type { Card, CardFinance } from "@/lib/supabase/types";
 import { createCard, updateCard, deleteCard, type CardInput } from "./actions";
@@ -80,7 +81,12 @@ export function CartasClient({
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="flex items-center justify-between"
+      >
         <div>
           <h1 className="font-display text-2xl text-ink">CARTAS</h1>
           <p className="mt-1 text-sm text-ink-muted">Catálogo pro leilão e vendas.</p>
@@ -89,9 +95,13 @@ export function CartasClient({
           <Plus className="h-4 w-4" />
           Nova carta
         </Button>
-      </div>
+      </motion.div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
+        className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
         {cards.length === 0 ? (
           <p className="p-6 text-sm text-ink-muted">Nenhuma carta cadastrada ainda.</p>
         ) : (
@@ -170,7 +180,7 @@ export function CartasClient({
             </TableBody>
           </Table>
         )}
-      </div>
+      </motion.div>
 
       <CardModal
         card={editing === "new" ? null : editing}

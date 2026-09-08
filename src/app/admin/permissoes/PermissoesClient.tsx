@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import { Loader2, Lock, UserCog } from "lucide-react";
 import { PERMISSION_LABEL, resolvePermissions, type PermissionKey } from "@/lib/permissions";
 import type { UserRole } from "@/lib/supabase/types";
@@ -110,7 +111,11 @@ export function PermissoesClient({
   }
 
   return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+    >
       <div className="flex items-center gap-2">
         <Lock className="h-5 w-5 text-primary" />
         <h1 className="font-display text-2xl text-ink">PERMISSÕES</h1>
@@ -229,7 +234,7 @@ export function PermissoesClient({
           )}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

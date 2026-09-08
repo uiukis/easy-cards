@@ -6,6 +6,7 @@ import { SITE } from "@/lib/site";
 import { WhatsAppIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { CustomerNav } from "@/components/CustomerNav";
+import { Reveal } from "@/components/Reveal";
 
 export default async function MinhasCartasPage() {
   const supabase = await createClient();
@@ -32,28 +33,30 @@ export default async function MinhasCartasPage() {
       <div className="mx-auto max-w-3xl">
         <CustomerNav />
 
-        <p className="font-comic text-sm text-primary">E aí, {firstName}! 👋</p>
-        <h1 className="mt-1 font-display text-3xl leading-[1.02] text-ink text-comic-shadow-sm sm:text-4xl">
-          MINHAS CARTAS
-        </h1>
-        <p className="mt-2 text-sm text-ink-muted">Tudo que você já comprou ou arrematou com a gente.</p>
+        <Reveal>
+          <p className="font-comic text-sm text-primary">E aí, {firstName}! 👋</p>
+          <h1 className="mt-1 font-display text-3xl leading-[1.02] text-ink text-comic-shadow-sm sm:text-4xl">
+            MINHAS CARTAS
+          </h1>
+          <p className="mt-2 text-sm text-ink-muted">Tudo que você já comprou ou arrematou com a gente.</p>
 
-        {purchases && purchases.length > 0 && (
-          <div className="mt-5 flex items-center gap-2 rounded-full border-2 border-ink/10 bg-surface px-4 py-2 text-sm font-bold text-ink w-fit">
-            <Wallet className="h-4 w-4 text-primary" />
-            R$ {total.toFixed(2)} investidos em {purchases.length}{" "}
-            {purchases.length === 1 ? "carta" : "cartas"}
-          </div>
-        )}
+          {purchases && purchases.length > 0 && (
+            <div className="mt-5 flex items-center gap-2 rounded-full border-2 border-ink/10 bg-surface px-4 py-2 text-sm font-bold text-ink w-fit">
+              <Wallet className="h-4 w-4 text-primary" />
+              R$ {total.toFixed(2)} investidos em {purchases.length}{" "}
+              {purchases.length === 1 ? "carta" : "cartas"}
+            </div>
+          )}
 
-        <Link
-          href="/fichario"
-          className="mt-4 flex w-fit items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-transform hover:scale-105 active:scale-95"
-        >
-          <BookOpen className="h-4 w-4" />
-          Montar meu fichário
-          <ArrowRight className="h-3.5 w-3.5" />
-        </Link>
+          <Link
+            href="/fichario"
+            className="mt-4 flex w-fit items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-transform hover:scale-105 active:scale-95"
+          >
+            <BookOpen className="h-4 w-4" />
+            Montar meu fichário
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </Reveal>
 
         {!purchases || purchases.length === 0 ? (
           <div className="mt-8 flex flex-col items-center gap-3 rounded-[2rem] border-2 border-dashed border-ink/15 bg-surface/60 py-16 text-center">
@@ -73,7 +76,7 @@ export default async function MinhasCartasPage() {
             </a>
           </div>
         ) : (
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <Reveal delay={0.1} className="mt-6 grid gap-4 sm:grid-cols-2">
             {purchases.map((p) => {
               const card = p.cards as {
                 name: string;
@@ -126,7 +129,7 @@ export default async function MinhasCartasPage() {
                 </div>
               );
             })}
-          </div>
+          </Reveal>
         )}
       </div>
     </main>

@@ -136,6 +136,76 @@ export async function removeFromBinder(id: string) {
   revalidatePath("/fichario");
 }
 
+export async function updateCardVariant(cardId: string, variant: string | null) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("binder_cards").update({ variant }).eq("id", cardId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+}
+
+export async function updateCardSpan(cardId: string, spanCols: number) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("binder_cards")
+    .update({ span_cols: spanCols })
+    .eq("id", cardId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+}
+
+export async function bulkDeleteCards(cardIds: string[]) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("binder_cards").delete().in("id", cardIds);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+}
+
+export async function moveCardsToBinder(cardIds: string[], targetBinderId: string) {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("binder_cards")
+    .select("*", { count: "exact", head: true })
+    .eq("binder_id", targetBinderId);
+
+  let nextPosition = count ?? 0;
+  for (const id of cardIds) {
+    const { error } = await supabase
+      .from("binder_cards")
+      .update({ binder_id: targetBinderId, position: nextPosition })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    nextPosition += 1;
+  }
+  revalidatePath("/fichario");
+}
+
+export async function listOtherBinders(excludeId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("binders")
+    .select("id, name")
+    .eq("user_id", user.id)
+    .neq("id", excludeId)
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
+export async function reorderPages(binderId: string, pageOrder: string[][]) {
+  const supabase = await createClient();
+  const flatOrder = pageOrder.flat();
+  await Promise.all(
+    flatOrder.map((id, position) =>
+      supabase.from("binder_cards").update({ position }).eq("id", id).eq("binder_id", binderId)
+    )
+  );
+  revalidatePath("/fichario");
+}
+
 export async function swapBinderCards(idA: string, idB: string) {
   const supabase = await createClient();
   const { data: cards, error: fetchError } = await supabase

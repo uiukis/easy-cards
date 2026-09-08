@@ -83,5 +83,7 @@ export type BinderCard = {
   card_number: string | null;
   image_url: string;
   position: number;
+  variant: string | null;
+  span_cols: number;
   created_at: string;
 };

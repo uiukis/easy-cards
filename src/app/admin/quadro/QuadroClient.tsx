@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "motion/react";
 import { Handshake, Newspaper, Plus, Trash2 } from "lucide-react";
 import type { Supporter, PressMention } from "@/lib/supabase/types";
 import {
@@ -41,9 +42,20 @@ export function QuadroClient({
 }) {
   return (
     <div>
-      <h1 className="font-display text-2xl text-ink">QUADRO</h1>
-      <p className="mt-1 text-sm text-ink-muted">Apoiadores e imprensa visíveis no site.</p>
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
+        <h1 className="font-display text-2xl text-ink">QUADRO</h1>
+        <p className="mt-1 text-sm text-ink-muted">Apoiadores e imprensa visíveis no site.</p>
+      </motion.div>
 
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
+      >
       <Tabs defaultValue="apoiadores" className="mt-6">
         <TabsList>
           <TabsTrigger value="apoiadores">
@@ -61,6 +73,7 @@ export function QuadroClient({
           <ImprensaTab initial={initialPressMentions} />
         </TabsContent>
       </Tabs>
+      </motion.div>
     </div>
   );
 }
