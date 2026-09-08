@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Calendar, Megaphone, Handshake, Plus, Trash2, Loader2 } from "lucide-react";
-import type { Announcement, EventSettings, Supporter } from "@/lib/supabase/types";
+import { Calendar, Megaphone, Handshake, Newspaper, Plus, Trash2, Loader2 } from "lucide-react";
+import type { Announcement, EventSettings, Supporter, PressMention } from "@/lib/supabase/types";
 import {
   updateEventSettings,
   createAnnouncement,
@@ -11,6 +11,9 @@ import {
   createSupporter,
   toggleSupporter,
   deleteSupporter,
+  createPressMention,
+  togglePressMention,
+  deletePressMention,
 } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,15 +42,17 @@ export function QuadroClient({
   eventSettings,
   initialAnnouncements,
   initialSupporters,
+  initialPressMentions,
 }: {
   eventSettings: EventSettings | null;
   initialAnnouncements: Announcement[];
   initialSupporters: Supporter[];
+  initialPressMentions: PressMention[];
 }) {
   return (
     <div>
       <h1 className="font-display text-2xl text-ink">QUADRO</h1>
-      <p className="mt-1 text-sm text-ink-muted">Evento, avisos e apoiadores visíveis no site.</p>
+      <p className="mt-1 text-sm text-ink-muted">Evento, avisos, apoiadores e imprensa visíveis no site.</p>
 
       <Tabs defaultValue="evento" className="mt-6">
         <TabsList>
@@ -60,6 +65,9 @@ export function QuadroClient({
           <TabsTrigger value="apoiadores">
             <Handshake className="h-4 w-4" /> Apoiadores
           </TabsTrigger>
+          <TabsTrigger value="imprensa">
+            <Newspaper className="h-4 w-4" /> Imprensa
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="evento" className="mt-4">
@@ -70,6 +78,9 @@ export function QuadroClient({
         </TabsContent>
         <TabsContent value="apoiadores" className="mt-4">
           <ApoiadoresTab initial={initialSupporters} />
+        </TabsContent>
+        <TabsContent value="imprensa" className="mt-4">
+          <ImprensaTab initial={initialPressMentions} />
         </TabsContent>
       </Tabs>
     </div>
@@ -341,6 +352,166 @@ function ApoiadoresTab({ initial }: { initial: Supporter[] }) {
                     onClick={async () => {
                       await deleteSupporter(s.id);
                       setItems((prev) => prev.filter((x) => x.id !== s.id));
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ImprensaTab({ initial }: { initial: PressMention[] }) {
+  const [items, setItems] = useState(initial);
+  const [title, setTitle] = useState("");
+  const [outlet, setOutlet] = useState("");
+  const [outletInstagram, setOutletInstagram] = useState("");
+  const [journalist, setJournalist] = useState("");
+  const [journalistInstagram, setJournalistInstagram] = useState("");
+  const [url, setUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [publishedDate, setPublishedDate] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || !outlet.trim() || !url.trim()) return;
+    setSaving(true);
+    const input = {
+      title,
+      outlet,
+      outlet_instagram: outletInstagram,
+      journalist,
+      journalist_instagram: journalistInstagram,
+      url,
+      image_url: imageUrl,
+      published_date: publishedDate,
+    };
+    await createPressMention(input);
+    setItems((prev) => [
+      {
+        id: crypto.randomUUID(),
+        title,
+        outlet,
+        outlet_instagram: outletInstagram || null,
+        journalist: journalist || null,
+        journalist_instagram: journalistInstagram || null,
+        url,
+        image_url: imageUrl || null,
+        published_date: publishedDate || null,
+        active: true,
+        sort_order: 0,
+        created_at: new Date().toISOString(),
+      },
+      ...prev,
+    ]);
+    setTitle("");
+    setOutlet("");
+    setOutletInstagram("");
+    setJournalist("");
+    setJournalistInstagram("");
+    setUrl("");
+    setImageUrl("");
+    setPublishedDate("");
+    setSaving(false);
+  }
+
+  return (
+    <div className="max-w-lg space-y-4">
+      <Card>
+        <CardContent>
+          <form onSubmit={handleAdd} className="space-y-2">
+            <Input
+              placeholder="Título da matéria"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            <Input placeholder="Link da matéria" value={url} onChange={(e) => setUrl(e.target.value)} />
+            <Input
+              placeholder="Imagem de capa (URL)"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Veículo (ex: Tudo de Novo)"
+                value={outlet}
+                onChange={(e) => setOutlet(e.target.value)}
+              />
+              <Input
+                placeholder="Instagram do veículo"
+                value={outletInstagram}
+                onChange={(e) => setOutletInstagram(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Jornalista"
+                value={journalist}
+                onChange={(e) => setJournalist(e.target.value)}
+              />
+              <Input
+                placeholder="Instagram do jornalista"
+                value={journalistInstagram}
+                onChange={(e) => setJournalistInstagram(e.target.value)}
+              />
+            </div>
+            <Input
+              type="date"
+              value={publishedDate}
+              onChange={(e) => setPublishedDate(e.target.value)}
+            />
+            <Button type="submit" disabled={saving}>
+              <Plus className="h-4 w-4" /> Adicionar
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <ul className="space-y-2">
+        {items.map((p) => (
+          <li key={p.id}>
+            <Card>
+              <CardContent className="flex items-center justify-between gap-3">
+                <div className={`flex items-center gap-3 ${p.active ? "" : "opacity-50"}`}>
+                  {p.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
+                    <img src={p.image_url} alt={p.title} className="h-12 w-12 rounded-lg object-cover" />
+                  ) : (
+                    <div className="h-12 w-12 rounded-lg bg-surface-alt" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="line-clamp-1 text-sm font-semibold text-ink">{p.title}</p>
+                    <p className="text-xs text-ink-muted">
+                      {p.outlet}
+                      {p.journalist && ` · ${p.journalist}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async () => {
+                      await togglePressMention(p.id, !p.active);
+                      setItems((prev) =>
+                        prev.map((x) => (x.id === p.id ? { ...x, active: !x.active } : x))
+                      );
+                    }}
+                  >
+                    {p.active ? "desativar" : "ativar"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={async () => {
+                      await deletePressMention(p.id);
+                      setItems((prev) => prev.filter((x) => x.id !== p.id));
                     }}
                   >
                     <Trash2 className="h-4 w-4" />

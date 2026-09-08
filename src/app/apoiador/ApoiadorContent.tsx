@@ -75,7 +75,15 @@ const LEILOES = [
   },
 ];
 
-export function ApoiadorContent({ supporters = [] }: { supporters?: Supporter[] }) {
+export function ApoiadorContent({
+  supporters = [],
+  eventDate = NEXT_EVENT.date,
+  eventPlace = NEXT_EVENT.place,
+}: {
+  supporters?: Supporter[];
+  eventDate?: string;
+  eventPlace?: string;
+}) {
   return (
     <>
       <Navbar />
@@ -112,7 +120,7 @@ export function ApoiadorContent({ supporters = [] }: { supporters?: Supporter[] 
               transition={{ delay: 0.2 }}
               className="mx-auto mt-5 max-w-xl text-balance text-base text-ink-muted sm:text-lg"
             >
-              Faça parte do nosso primeiro evento presencial — {NEXT_EVENT.date}, no {NEXT_EVENT.place} — e das ações da Easy Cards ao longo do ano. Apresente seus produtos a jogadores, colecionadores e novos interessados no hobby.
+              Faça parte do nosso primeiro evento presencial — {eventDate}, no {eventPlace} — e das ações da Easy Cards ao longo do ano. Apresente seus produtos a jogadores, colecionadores e novos interessados no hobby.
             </motion.p>
 
             <motion.div

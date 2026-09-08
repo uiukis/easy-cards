@@ -68,6 +68,21 @@ export type Supporter = {
   created_at: string;
 };
 
+export type PressMention = {
+  id: string;
+  title: string;
+  outlet: string;
+  outlet_instagram: string | null;
+  journalist: string | null;
+  journalist_instagram: string | null;
+  url: string;
+  image_url: string | null;
+  published_date: string | null;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
 export type BinderCard = {
   id: string;
   user_id: string;

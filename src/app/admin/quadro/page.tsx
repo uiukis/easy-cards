@@ -21,17 +21,20 @@ export default async function QuadroPage() {
   const permissions = await getEffectivePermissions(supabase, user.id, viewerProfile.role);
   if (!permissions.manage_quadro) redirect("/admin");
 
-  const [{ data: eventSettings }, { data: announcements }, { data: supporters }] = await Promise.all([
-    supabase.from("event_settings").select("*").single(),
-    supabase.from("announcements").select("*").order("created_at", { ascending: false }),
-    supabase.from("supporters").select("*").order("sort_order", { ascending: true }),
-  ]);
+  const [{ data: eventSettings }, { data: announcements }, { data: supporters }, { data: pressMentions }] =
+    await Promise.all([
+      supabase.from("event_settings").select("*").single(),
+      supabase.from("announcements").select("*").order("created_at", { ascending: false }),
+      supabase.from("supporters").select("*").order("sort_order", { ascending: true }),
+      supabase.from("press_mentions").select("*").order("published_date", { ascending: false }),
+    ]);
 
   return (
     <QuadroClient
       eventSettings={eventSettings}
       initialAnnouncements={announcements ?? []}
       initialSupporters={supporters ?? []}
+      initialPressMentions={pressMentions ?? []}
     />
   );
 }

@@ -15,7 +15,15 @@ const BG_CARD_SLOTS = [
   { pos: "-bottom-10 -right-28", rotate: 14, w: "w-36 sm:w-48", z: 3 },
 ] as const;
 
-export function EventsSection() {
+export function EventsSection({
+  date = NEXT_EVENT.date,
+  place = NEXT_EVENT.place,
+  tag = NEXT_EVENT.tag,
+}: {
+  date?: string;
+  place?: string;
+  tag?: string;
+}) {
   const [bgCards, setBgCards] = useState<string[]>([]);
 
   useEffect(() => {
@@ -82,8 +90,8 @@ export function EventsSection() {
               </h3>
               <p className="mt-5 max-w-sm text-sm font-medium text-blue-dark/90">
                 Regras, decks de treino e as primeiras partidas guiadas —
-                sem pressão, no seu ritmo. {NEXT_EVENT.date}, no{" "}
-                {NEXT_EVENT.place}.
+                sem pressão, no seu ritmo. {date}, no{" "}
+                {place}.
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -96,7 +104,7 @@ export function EventsSection() {
                 </Link>
               </div>
               <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-blue-dark/70">
-                {NEXT_EVENT.tag} · vagas limitadas
+                {tag} · vagas limitadas
               </p>
             </div>
           </motion.div>

@@ -11,17 +11,27 @@ import { Community } from "@/components/Community";
 import { Founders } from "@/components/Founders";
 import { Footer } from "@/components/Footer";
 import { JoinModal } from "@/components/JoinModal";
+import { PressSection } from "@/components/PressSection";
 import { createClient } from "@/lib/supabase/server";
+import { formatDatePt } from "@/lib/format";
 
 export default async function Home() {
   const supabase = await createClient();
-  const [{ data: eventSettings }, { data: announcements }] = await Promise.all([
-    supabase.from("event_settings").select("banner_enabled, banner_message").single(),
+  const [{ data: eventSettings }, { data: announcements }, { data: pressMentions }] = await Promise.all([
+    supabase
+      .from("event_settings")
+      .select("banner_enabled, banner_message, event_date, place, tag")
+      .single(),
     supabase
       .from("announcements")
       .select("*")
       .eq("active", true)
       .order("created_at", { ascending: false }),
+    supabase
+      .from("press_mentions")
+      .select("*")
+      .eq("active", true)
+      .order("published_date", { ascending: false }),
   ]);
 
   return (
@@ -35,7 +45,12 @@ export default async function Home() {
         <Hero />
         <AnnouncementsStrip announcements={announcements ?? []} />
         <About />
-        <EventsSection />
+        <EventsSection
+          date={eventSettings?.event_date ? formatDatePt(eventSettings.event_date) : undefined}
+          place={eventSettings?.place ?? undefined}
+          tag={eventSettings?.tag ?? undefined}
+        />
+        <PressSection mentions={pressMentions ?? []} />
         <AuctionsSection />
         <GradedShowcase />
         <SupportSection />

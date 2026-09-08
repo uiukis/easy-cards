@@ -23,12 +23,8 @@ import { Footer } from "@/components/Footer";
 import { Sunburst } from "@/components/Sunburst";
 import { WhatsAppIcon, InstagramIcon } from "@/components/icons";
 import { SITE, NEXT_EVENT, LARA_INSTAGRAM, EVENT_FORM_URL } from "@/lib/site";
-import type { EventSettings } from "@/lib/supabase/types";
-
-function formatDatePt(iso: string) {
-  const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
-}
+import type { EventSettings, Supporter } from "@/lib/supabase/types";
+import { formatDatePt } from "@/lib/format";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -113,16 +109,14 @@ const EQUIPE_APOIO = [
   { name: "Bão Santos", role: "Atendimento e suporte" },
 ];
 
-const APOIADORES = [
-  "Kaizen Cards",
-  "Alquimia TCG",
-  "Kizuna Cards",
-  "RVNA",
-  "Dinamite TCG",
-  "RWTCG",
-];
 
-export function EventoContent({ eventSettings }: { eventSettings?: EventSettings | null }) {
+export function EventoContent({
+  eventSettings,
+  supporters = [],
+}: {
+  eventSettings?: EventSettings | null;
+  supporters?: Supporter[];
+}) {
   const title = eventSettings?.title || NEXT_EVENT.title;
   const dateDisplay = eventSettings?.event_date ? formatDatePt(eventSettings.event_date) : NEXT_EVENT.date;
   const place = eventSettings?.place || NEXT_EVENT.place;
@@ -552,36 +546,41 @@ export function EventoContent({ eventSettings }: { eventSettings?: EventSettings
         </section>
 
         {/* apoiadores confirmados */}
-        <section className="relative py-16 sm:py-20">
-          <div className="mx-auto max-w-6xl px-5 sm:px-8">
-            <motion.div {...fadeUp} className="max-w-xl text-center mx-auto">
-              <span className="font-comic text-sm tracking-wide text-orange-deep">
-                ★ Já confirmaram presença
-              </span>
-              <h2 className="mt-3 font-display text-3xl leading-[1.02] text-ink sm:text-4xl">
-                LOJISTAS APOIADORES
-              </h2>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="mt-8 flex flex-wrap items-center justify-center gap-3"
-            >
-              {APOIADORES.map((a) => (
-                <span
-                  key={a}
-                  className="flex items-center gap-2 rounded-full border-2 border-ink/10 bg-surface px-5 py-2.5 text-sm font-bold text-ink"
-                >
-                  <Store className="h-4 w-4 text-orange-deep" />
-                  {a}
+        {supporters.length > 0 && (
+          <section className="relative py-16 sm:py-20">
+            <div className="mx-auto max-w-6xl px-5 sm:px-8">
+              <motion.div {...fadeUp} className="max-w-xl text-center mx-auto">
+                <span className="font-comic text-sm tracking-wide text-orange-deep">
+                  ★ Já confirmaram presença
                 </span>
-              ))}
-            </motion.div>
-          </div>
-        </section>
+                <h2 className="mt-3 font-display text-3xl leading-[1.02] text-ink sm:text-4xl">
+                  LOJISTAS APOIADORES
+                </h2>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="mt-8 flex flex-wrap items-center justify-center gap-3"
+              >
+                {supporters.map((s) => (
+                  <a
+                    key={s.id}
+                    href={s.instagram ?? undefined}
+                    target={s.instagram ? "_blank" : undefined}
+                    rel={s.instagram ? "noopener noreferrer" : undefined}
+                    className="flex items-center gap-2 rounded-full border-2 border-ink/10 bg-surface px-5 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-105"
+                  >
+                    <Store className="h-4 w-4 text-orange-deep" />
+                    {s.name}
+                  </a>
+                ))}
+              </motion.div>
+            </div>
+          </section>
+        )}
 
         {/* cta final */}
         <section className="relative py-16 sm:py-24">

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { formatDatePt } from "@/lib/format";
 import { ApoiadorContent } from "./ApoiadorContent";
 
 export const metadata: Metadata = {
@@ -10,11 +11,16 @@ export const metadata: Metadata = {
 
 export default async function ApoiadorPage() {
   const supabase = await createClient();
-  const { data: supporters } = await supabase
-    .from("supporters")
-    .select("*")
-    .eq("active", true)
-    .order("sort_order", { ascending: true });
+  const [{ data: supporters }, { data: eventSettings }] = await Promise.all([
+    supabase.from("supporters").select("*").eq("active", true).order("sort_order", { ascending: true }),
+    supabase.from("event_settings").select("event_date, place").single(),
+  ]);
 
-  return <ApoiadorContent supporters={supporters ?? []} />;
+  return (
+    <ApoiadorContent
+      supporters={supporters ?? []}
+      eventDate={eventSettings?.event_date ? formatDatePt(eventSettings.event_date) : undefined}
+      eventPlace={eventSettings?.place ?? undefined}
+    />
+  );
 }
