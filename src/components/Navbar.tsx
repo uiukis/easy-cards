@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
+import { User } from "lucide-react";
 import { SITE } from "@/lib/site";
 import { WhatsAppIcon } from "./icons";
 import { ThemeToggle } from "./ThemeToggle";
@@ -71,6 +72,14 @@ export function Navbar() {
             <span className="hidden sm:inline">Entrar no grupo</span>
             <span className="sm:hidden">Grupo</span>
           </a>
+          <Link
+            href="/portal"
+            aria-label="Entrar na sua conta"
+            title="Entrar"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-ink/15 bg-surface text-ink transition-colors hover:bg-surface-alt"
+          >
+            <User className="h-4 w-4" />
+          </Link>
           <ThemeToggle />
         </div>
       </nav>

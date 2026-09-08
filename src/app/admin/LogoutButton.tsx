@@ -3,8 +3,10 @@
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export function LogoutButton() {
+export function LogoutButton({ className }: { className?: string }) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -15,12 +17,9 @@ export function LogoutButton() {
   }
 
   return (
-    <button
-      onClick={handleLogout}
-      className="mt-2 flex w-full items-center gap-2 rounded-xl px-2 py-2 text-sm font-semibold text-ink-muted transition-colors hover:bg-surface-alt hover:text-orange-deep"
-    >
+    <Button variant="ghost" size="sm" onClick={handleLogout} className={cn("shrink-0", className)}>
       <LogOut className="h-4 w-4" />
       Sair
-    </button>
+    </Button>
   );
 }

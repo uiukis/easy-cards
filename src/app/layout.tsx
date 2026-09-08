@@ -3,6 +3,7 @@ import { Luckiest_Guy, Bangers, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { themeInitScript } from "@/lib/theme-store";
+import { cn } from "@/lib/utils";
 
 const luckiestGuy = Luckiest_Guy({
   variable: "--font-luckiest",
@@ -46,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="pt-BR"
-      className={`${luckiestGuy.variable} ${bangers.variable} ${inter.variable} h-full antialiased`}
+      className={cn("h-full", "antialiased", luckiestGuy.variable, bangers.variable, inter.variable)}
       suppressHydrationWarning
     >
       <head>

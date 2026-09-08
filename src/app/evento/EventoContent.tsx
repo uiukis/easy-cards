@@ -23,6 +23,12 @@ import { Footer } from "@/components/Footer";
 import { Sunburst } from "@/components/Sunburst";
 import { WhatsAppIcon, InstagramIcon } from "@/components/icons";
 import { SITE, NEXT_EVENT, LARA_INSTAGRAM, EVENT_FORM_URL } from "@/lib/site";
+import type { EventSettings } from "@/lib/supabase/types";
+
+function formatDatePt(iso: string) {
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
+}
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -116,7 +122,13 @@ const APOIADORES = [
   "RWTCG",
 ];
 
-export function EventoContent() {
+export function EventoContent({ eventSettings }: { eventSettings?: EventSettings | null }) {
+  const title = eventSettings?.title || NEXT_EVENT.title;
+  const dateDisplay = eventSettings?.event_date ? formatDatePt(eventSettings.event_date) : NEXT_EVENT.date;
+  const place = eventSettings?.place || NEXT_EVENT.place;
+  const tag = eventSettings?.tag || NEXT_EVENT.tag;
+  const formUrl = eventSettings?.form_url || EVENT_FORM_URL;
+
   return (
     <>
       <Navbar />
@@ -143,7 +155,7 @@ export function EventoContent() {
               transition={{ delay: 0.1 }}
               className="mt-4 font-display text-5xl leading-[0.95] text-orange-deep text-comic-shadow sm:text-7xl"
             >
-              {NEXT_EVENT.title}
+              {title}
             </motion.h1>
 
             <motion.p
@@ -164,15 +176,15 @@ export function EventoContent() {
             >
               <span className="flex items-center gap-1.5 rounded-full border-2 border-ink/10 bg-surface px-4 py-2 text-sm font-bold text-ink">
                 <Calendar className="h-4 w-4 text-orange-deep" />
-                {NEXT_EVENT.date}
+                {dateDisplay}
               </span>
               <span className="flex items-center gap-1.5 rounded-full border-2 border-ink/10 bg-surface px-4 py-2 text-sm font-bold text-ink">
                 <MapPin className="h-4 w-4 text-orange-deep" />
-                {NEXT_EVENT.place}
+                {place}
               </span>
               <span className="flex items-center gap-1.5 rounded-full border-2 border-ink/10 bg-surface px-4 py-2 text-sm font-bold text-ink">
                 <Flag className="h-4 w-4 text-orange-deep" />
-                {NEXT_EVENT.tag}
+                {tag}
               </span>
             </motion.div>
 
@@ -183,7 +195,7 @@ export function EventoContent() {
               className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
             >
               <a
-                href={EVENT_FORM_URL}
+                href={formUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-full bg-teal px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-teal/25 transition-transform hover:scale-105 active:scale-95"
@@ -283,7 +295,7 @@ export function EventoContent() {
             </div>
 
             <motion.a
-              href={EVENT_FORM_URL}
+              href={formUrl}
               target="_blank"
               rel="noopener noreferrer"
               initial={{ opacity: 0 }}
@@ -584,7 +596,7 @@ export function EventoContent() {
             </p>
             <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <a
-                href={EVENT_FORM_URL}
+                href={formUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 rounded-full bg-teal px-7 py-3.5 text-sm font-bold text-white shadow-xl shadow-teal/25 transition-transform hover:scale-105 active:scale-95"

@@ -1,4 +1,5 @@
 import { EventBanner } from "@/components/EventBanner";
+import { AnnouncementsStrip } from "@/components/AnnouncementsStrip";
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
 import { About } from "@/components/About";
@@ -10,15 +11,29 @@ import { Community } from "@/components/Community";
 import { Founders } from "@/components/Founders";
 import { Footer } from "@/components/Footer";
 import { JoinModal } from "@/components/JoinModal";
-import { DevBadge } from "@/components/DevBadge";
+import { createClient } from "@/lib/supabase/server";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const [{ data: eventSettings }, { data: announcements }] = await Promise.all([
+    supabase.from("event_settings").select("banner_enabled, banner_message").single(),
+    supabase
+      .from("announcements")
+      .select("*")
+      .eq("active", true)
+      .order("created_at", { ascending: false }),
+  ]);
+
   return (
     <>
-      <EventBanner />
+      <EventBanner
+        enabled={eventSettings?.banner_enabled ?? true}
+        message={eventSettings?.banner_message}
+      />
       <Navbar />
       <main className="flex-1">
         <Hero />
+        <AnnouncementsStrip announcements={announcements ?? []} />
         <About />
         <EventsSection />
         <AuctionsSection />
@@ -29,7 +44,6 @@ export default function Home() {
       </main>
       <Footer />
       <JoinModal />
-      <DevBadge />
     </>
   );
 }

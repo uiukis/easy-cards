@@ -1,12 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import type { Profile, UserRole } from "@/lib/supabase/types";
 import { updateUserRole } from "./actions";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const ROLE_LABEL: Record<UserRole, string> = {
-  owner: "Dono",
+  cto: "CTO",
+  admin: "Admin",
   staff: "Equipe",
   customer: "Cliente",
 };
@@ -14,9 +31,11 @@ const ROLE_LABEL: Record<UserRole, string> = {
 export function UsuariosClient({
   profiles,
   currentUserId,
+  canEditRoles,
 }: {
   profiles: Profile[];
   currentUserId: string;
+  canEditRoles: boolean;
 }) {
   const [rows, setRows] = useState(profiles);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -35,49 +54,72 @@ export function UsuariosClient({
     <div>
       <h1 className="font-display text-2xl text-ink">USUÁRIOS</h1>
       <p className="mt-1 text-sm text-ink-muted">
-        Controle quem é dono, equipe ou cliente.
+        {canEditRoles
+          ? "Controle quem é CTO, admin, equipe ou cliente."
+          : "Só o CTO pode alterar permissões de usuários."}
       </p>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border-2 border-ink/10 bg-surface">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b-2 border-ink/10 text-xs font-semibold text-ink-muted">
-              <th className="px-5 py-3">Nome</th>
-              <th className="px-5 py-3">Telefone</th>
-              <th className="px-5 py-3">Permissão</th>
-            </tr>
-          </thead>
-          <tbody>
+      {canEditRoles && (
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-ink">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <p>
+            O cadastro não confirma o número por SMS (é assim que fica de graça). Antes de promover
+            alguém pra Admin ou Equipe, confirme com a pessoa por um canal que você já confia (o
+            WhatsApp de sempre, por exemplo) que foi ela mesma quem criou a conta com aquele número.
+          </p>
+        </div>
+      )}
+
+      <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Telefone</TableHead>
+              <TableHead>Permissão</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((p) => (
-              <tr key={p.id} className="border-b border-ink/5 last:border-0">
-                <td className="px-5 py-3 font-semibold text-ink">
+              <TableRow key={p.id}>
+                <TableCell className="font-semibold text-ink">
                   {p.full_name || "—"}
                   {p.id === currentUserId && (
                     <span className="ml-2 text-xs font-normal text-ink-muted">(você)</span>
                   )}
-                </td>
-                <td className="px-5 py-3 text-ink-muted">{p.phone}</td>
-                <td className="px-5 py-3">
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={p.role}
-                      disabled={p.id === currentUserId || savingId === p.id}
-                      onChange={(e) => handleRoleChange(p.id, e.target.value as UserRole)}
-                      className="rounded-lg border-2 border-ink/10 bg-bg px-2.5 py-1.5 text-xs font-semibold text-ink outline-none focus:border-orange-deep disabled:opacity-50"
-                    >
-                      {(Object.keys(ROLE_LABEL) as UserRole[]).map((role) => (
-                        <option key={role} value={role}>
-                          {ROLE_LABEL[role]}
-                        </option>
-                      ))}
-                    </select>
-                    {savingId === p.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-muted" />}
-                  </div>
-                </td>
-              </tr>
+                </TableCell>
+                <TableCell className="text-ink-muted">{p.phone}</TableCell>
+                <TableCell>
+                  {canEditRoles ? (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={p.role}
+                        disabled={p.id === currentUserId || savingId === p.id}
+                        onValueChange={(v) => v && handleRoleChange(p.id, v as UserRole)}
+                      >
+                        <SelectTrigger size="sm">
+                          <SelectValue>{(v: UserRole) => ROLE_LABEL[v]}</SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(ROLE_LABEL) as UserRole[]).map((role) => (
+                            <SelectItem key={role} value={role}>
+                              {ROLE_LABEL[role]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {savingId === p.id && (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-muted" />
+                      )}
+                    </div>
+                  ) : (
+                    <Badge variant="secondary">{ROLE_LABEL[p.role]}</Badge>
+                  )}
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

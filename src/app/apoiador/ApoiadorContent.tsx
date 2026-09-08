@@ -16,8 +16,9 @@ import {
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Sunburst } from "@/components/Sunburst";
-import { WhatsAppIcon } from "@/components/icons";
+import { WhatsAppIcon, InstagramIcon } from "@/components/icons";
 import { SITE, NEXT_EVENT, LARA_INSTAGRAM } from "@/lib/site";
+import type { Supporter } from "@/lib/supabase/types";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -74,7 +75,7 @@ const LEILOES = [
   },
 ];
 
-export function ApoiadorContent() {
+export function ApoiadorContent({ supporters = [] }: { supporters?: Supporter[] }) {
   return (
     <>
       <Navbar />
@@ -291,6 +292,54 @@ export function ApoiadorContent() {
             </div>
           </div>
         </section>
+
+        {/* apoiadores atuais */}
+        {supporters.length > 0 && (
+          <section className="relative py-16 sm:py-20">
+            <div className="mx-auto max-w-4xl px-5 text-center sm:px-8">
+              <Handshake className="mx-auto h-8 w-8 text-orange-deep" />
+              <motion.h2
+                {...fadeUp}
+                className="mt-4 font-display text-3xl leading-[1.02] text-ink sm:text-4xl"
+              >
+                QUEM JÁ APOIA A EASY CARDS
+              </motion.h2>
+
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
+                {supporters.map((s, i) => (
+                  <motion.a
+                    key={s.id}
+                    href={s.instagram ?? undefined}
+                    target={s.instagram ? "_blank" : undefined}
+                    rel={s.instagram ? "noopener noreferrer" : undefined}
+                    initial={{ opacity: 0, y: 16 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-60px" }}
+                    transition={{ duration: 0.4, delay: i * 0.06 }}
+                    className="group flex flex-col items-center gap-2"
+                  >
+                    {s.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
+                      <img
+                        src={s.image_url}
+                        alt={s.name}
+                        className="h-16 w-16 rounded-full border-2 border-ink/10 object-cover transition-transform group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-ink/10 bg-surface font-display text-lg text-orange-deep">
+                        {s.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <span className="flex items-center gap-1 text-xs font-semibold text-ink">
+                      {s.name}
+                      {s.instagram && <InstagramIcon className="h-3 w-3 text-ink-muted" />}
+                    </span>
+                  </motion.a>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* por que apoiar */}
         <section className="relative py-16 sm:py-20">

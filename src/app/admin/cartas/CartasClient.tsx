@@ -1,9 +1,37 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Pencil, Trash2, X, Loader2 } from "lucide-react";
-import type { Card } from "@/lib/supabase/types";
-import { createCard, updateCard, deleteCard } from "./actions";
+import { Plus, Pencil, Trash2, Loader2, HandCoins, ArrowLeft, ImageOff } from "lucide-react";
+import type { Card, CardFinance } from "@/lib/supabase/types";
+import { createCard, updateCard, deleteCard, type CardInput } from "./actions";
+import { CardSearch, type SearchResult } from "./CardSearch";
+import { FinanceModal } from "./FinanceModal";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const STATUS_LABEL: Record<Card["status"], string> = {
   available: "Disponível",
@@ -11,15 +39,24 @@ const STATUS_LABEL: Record<Card["status"], string> = {
   sold: "Vendida",
 };
 
-const STATUS_COLOR: Record<Card["status"], string> = {
-  available: "bg-teal/15 text-teal",
-  in_auction: "bg-yellow/20 text-orange-deep",
-  sold: "bg-ink/10 text-ink-muted",
+const STATUS_VARIANT: Record<Card["status"], "secondary" | "default" | "outline"> = {
+  available: "secondary",
+  in_auction: "default",
+  sold: "outline",
 };
 
-export function CartasClient({ initialCards }: { initialCards: Card[] }) {
+export function CartasClient({
+  initialCards,
+  canViewFinance,
+  financeByCardId,
+}: {
+  initialCards: Card[];
+  canViewFinance: boolean;
+  financeByCardId: Record<string, CardFinance>;
+}) {
   const [cards, setCards] = useState(initialCards);
   const [editing, setEditing] = useState<Card | "new" | null>(null);
+  const [financeFor, setFinanceFor] = useState<Card | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
@@ -37,33 +74,29 @@ export function CartasClient({ initialCards }: { initialCards: Card[] }) {
           <h1 className="font-display text-2xl text-ink">CARTAS</h1>
           <p className="mt-1 text-sm text-ink-muted">Catálogo pro leilão e vendas.</p>
         </div>
-        <button
-          onClick={() => setEditing("new")}
-          className="flex items-center gap-2 rounded-full bg-orange-deep px-4 py-2.5 text-sm font-bold text-white transition-transform hover:scale-105 active:scale-95"
-        >
+        <Button onClick={() => setEditing("new")}>
           <Plus className="h-4 w-4" />
           Nova carta
-        </button>
+        </Button>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border-2 border-ink/10 bg-surface">
+      <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
         {cards.length === 0 ? (
           <p className="p-6 text-sm text-ink-muted">Nenhuma carta cadastrada ainda.</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b-2 border-ink/10 text-xs font-semibold text-ink-muted">
-                <th className="px-5 py-3">Carta</th>
-                <th className="px-5 py-3">Condição</th>
-                <th className="px-5 py-3">Preço inicial</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Carta</TableHead>
+                <TableHead>Condição</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {cards.map((card) => (
-                <tr key={card.id} className="border-b border-ink/5 last:border-0">
-                  <td className="flex items-center gap-3 px-5 py-3">
+                <TableRow key={card.id}>
+                  <TableCell className="flex items-center gap-3">
                     {card.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs, not worth whitelisting every hostname
                       <img
@@ -77,104 +110,146 @@ export function CartasClient({ initialCards }: { initialCards: Card[] }) {
                       <div className="h-11 w-8 rounded-sm bg-surface-alt" />
                     )}
                     <div>
-                      <p className="font-semibold text-ink">{card.name}</p>
+                      <p className="font-semibold text-ink">
+                        {card.name}
+                        {card.card_number && (
+                          <span className="ml-1 font-normal text-ink-muted">
+                            ({card.card_number})
+                          </span>
+                        )}
+                      </p>
                       {card.set_name && <p className="text-xs text-ink-muted">{card.set_name}</p>}
                     </div>
-                  </td>
-                  <td className="px-5 py-3 text-ink-muted">{card.condition || "—"}</td>
-                  <td className="px-5 py-3 text-ink-muted">
-                    {card.starting_price != null ? `R$ ${card.starting_price.toFixed(2)}` : "—"}
-                  </td>
-                  <td className="px-5 py-3">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_COLOR[card.status]}`}
-                    >
-                      {STATUS_LABEL[card.status]}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setEditing(card)}
-                        className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-surface-alt hover:text-ink"
-                      >
+                  </TableCell>
+                  <TableCell className="text-ink-muted">{card.condition || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant={STATUS_VARIANT[card.status]}>{STATUS_LABEL[card.status]}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {canViewFinance && (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => setFinanceFor(card)}
+                          title="Financeiro"
+                        >
+                          <HandCoins className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon-sm" onClick={() => setEditing(card)}>
                         <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
                         onClick={() => handleDelete(card.id)}
                         disabled={deletingId === card.id}
-                        className="rounded-lg p-1.5 text-ink-muted transition-colors hover:bg-surface-alt hover:text-orange-deep"
                       >
                         {deletingId === card.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Trash2 className="h-4 w-4" />
                         )}
-                      </button>
+                      </Button>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         )}
       </div>
 
-      {editing && (
-        <CardModal
-          card={editing === "new" ? null : editing}
-          onClose={() => setEditing(null)}
-          onSaved={(card) => {
-            setCards((prev) =>
-              editing === "new"
-                ? [card, ...prev]
-                : prev.map((c) => (c.id === card.id ? card : c))
-            );
-            setEditing(null);
-          }}
+      <CardModal
+        card={editing === "new" ? null : editing}
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+        onSaved={(card) => {
+          setCards((prev) =>
+            editing === "new" ? [card, ...prev] : prev.map((c) => (c.id === card.id ? card : c))
+          );
+          setEditing(null);
+        }}
+      />
+
+      {financeFor && (
+        <FinanceModal
+          card={financeFor}
+          finance={financeByCardId[financeFor.id] ?? null}
+          onClose={() => setFinanceFor(null)}
+          onSaved={() => window.location.reload()}
         />
       )}
     </div>
   );
 }
 
+type Step = "search" | "details";
+
 function CardModal({
   card,
+  open,
   onClose,
   onSaved,
 }: {
   card: Card | null;
+  open: boolean;
   onClose: () => void;
   onSaved: (card: Card) => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<CardInput>(() => toFormState(card));
+  const [step, setStep] = useState<Step>(card ? "details" : "search");
+  const [showImageUrl, setShowImageUrl] = useState(!card?.image_url);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  // Re-seed the form whenever a different card (or "new") opens.
+  const [openCardId, setOpenCardId] = useState(card?.id ?? "new");
+  if ((card?.id ?? "new") !== openCardId) {
+    setOpenCardId(card?.id ?? "new");
+    setForm(toFormState(card));
+    setStep(card ? "details" : "search");
+    setShowImageUrl(!card?.image_url);
+  }
+
+  function handleSelect(result: SearchResult) {
+    setForm((f) => ({
+      ...f,
+      name: result.name,
+      set_name: result.setName,
+      card_number: result.cardNumber,
+      image_url: result.imageUrl,
+      tcg_api_id: result.id,
+    }));
+    setShowImageUrl(false);
+    setStep("details");
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.image_url) {
+      setError("Toda carta precisa de uma imagem.");
+      return;
+    }
     setSaving(true);
     setError(null);
-    const formData = new FormData(e.currentTarget);
 
     try {
       if (card) {
-        await updateCard(card.id, formData);
+        await updateCard(card.id, form);
         onSaved({
           ...card,
-          name: formData.get("name") as string,
-          set_name: (formData.get("set_name") as string) || null,
-          image_url: (formData.get("image_url") as string) || null,
-          condition: (formData.get("condition") as string) || null,
-          description: (formData.get("description") as string) || null,
-          starting_price: formData.get("starting_price")
-            ? Number(formData.get("starting_price"))
-            : null,
-          status: formData.get("status") as Card["status"],
+          name: form.name,
+          set_name: form.set_name || null,
+          card_number: form.card_number || null,
+          image_url: form.image_url || null,
+          condition: form.condition || null,
+          description: form.description || null,
+          status: form.status,
         });
       } else {
-        await createCard(formData);
-        // A full card row (with generated id) isn't returned by the action,
-        // so just close and let the server-rendered list refresh via revalidatePath.
+        await createCard(form);
         window.location.reload();
       }
     } catch (err) {
@@ -184,82 +259,156 @@ function CardModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-5">
-      <div className="w-full max-w-md rounded-2xl border-2 border-ink/10 bg-surface p-6">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg text-ink">
-            {card ? "EDITAR CARTA" : "NOVA CARTA"}
-          </h2>
-          <button onClick={onClose} className="text-ink-muted hover:text-ink">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display tracking-wide">
+            {card ? "EDITAR CARTA" : step === "search" ? "BUSCAR CARTA" : "DETALHES DA CARTA"}
+          </DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-3">
-          <input
-            name="name"
-            required
-            defaultValue={card?.name}
-            placeholder="Nome da carta"
-            className="w-full rounded-xl border-2 border-ink/10 bg-bg px-4 py-2 text-sm text-ink outline-none focus:border-orange-deep"
-          />
-          <input
-            name="set_name"
-            defaultValue={card?.set_name ?? ""}
-            placeholder="Coleção (opcional)"
-            className="w-full rounded-xl border-2 border-ink/10 bg-bg px-4 py-2 text-sm text-ink outline-none focus:border-orange-deep"
-          />
-          <input
-            name="image_url"
-            defaultValue={card?.image_url ?? ""}
-            placeholder="URL da imagem"
-            className="w-full rounded-xl border-2 border-ink/10 bg-bg px-4 py-2 text-sm text-ink outline-none focus:border-orange-deep"
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              name="condition"
-              defaultValue={card?.condition ?? ""}
-              placeholder="Condição (NM, LP...)"
-              className="w-full rounded-xl border-2 border-ink/10 bg-bg px-4 py-2 text-sm text-ink outline-none focus:border-orange-deep"
-            />
-            <input
-              name="starting_price"
-              type="number"
-              step="0.01"
-              defaultValue={card?.starting_price ?? ""}
-              placeholder="Preço inicial"
-              className="w-full rounded-xl border-2 border-ink/10 bg-bg px-4 py-2 text-sm text-ink outline-none focus:border-orange-deep"
-            />
+        {step === "search" ? (
+          <div className="space-y-3">
+            <CardSearch onSelect={handleSelect} />
+            <button
+              type="button"
+              onClick={() => setStep("details")}
+              className="text-center text-xs font-semibold text-ink-muted underline w-full"
+            >
+              Não achei a carta, preencher na mão
+            </button>
           </div>
-          <select
-            name="status"
-            defaultValue={card?.status ?? "available"}
-            className="w-full rounded-xl border-2 border-ink/10 bg-bg px-4 py-2 text-sm text-ink outline-none focus:border-orange-deep"
-          >
-            <option value="available">Disponível</option>
-            <option value="in_auction">Em leilão</option>
-            <option value="sold">Vendida</option>
-          </select>
-          <textarea
-            name="description"
-            defaultValue={card?.description ?? ""}
-            placeholder="Descrição (opcional)"
-            rows={2}
-            className="w-full rounded-xl border-2 border-ink/10 bg-bg px-4 py-2 text-sm text-ink outline-none focus:border-orange-deep"
-          />
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {!card && (
+              <button
+                type="button"
+                onClick={() => setStep("search")}
+                className="flex items-center gap-1 text-xs font-semibold text-ink-muted hover:text-ink"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Voltar pra busca
+              </button>
+            )}
 
-          {error && <p className="text-sm text-orange-deep">{error}</p>}
+            <div className="flex flex-col items-center gap-2">
+              {form.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element -- external card art preview
+                <img
+                  src={form.image_url}
+                  alt={form.name || "Preview da carta"}
+                  className="h-40 w-auto rounded-lg object-contain shadow-md"
+                />
+              ) : (
+                <div className="flex h-40 w-28 flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-border text-ink-muted">
+                  <ImageOff className="h-6 w-6" />
+                  <span className="text-[11px]">Sem imagem</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowImageUrl((v) => !v)}
+                className="text-xs font-semibold text-ink-muted underline"
+              >
+                {showImageUrl ? "esconder link da imagem" : "editar link da imagem"}
+              </button>
+            </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-orange-deep px-4 py-2.5 text-sm font-bold text-white transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-60"
-          >
-            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-            Salvar
-          </button>
-        </form>
-      </div>
-    </div>
+            {showImageUrl && (
+              <div className="space-y-1.5">
+                <Label>URL da imagem *</Label>
+                <Input
+                  required
+                  value={form.image_url}
+                  onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
+                  placeholder="https://..."
+                />
+              </div>
+            )}
+
+            <div className="space-y-1.5">
+              <Label>Nome da carta *</Label>
+              <Input
+                required
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Coleção (opcional)</Label>
+                <Input
+                  value={form.set_name}
+                  onChange={(e) => setForm((f) => ({ ...f, set_name: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Número (ex: 20/189)</Label>
+                <Input
+                  value={form.card_number}
+                  onChange={(e) => setForm((f) => ({ ...f, card_number: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Condição</Label>
+                <Input
+                  placeholder="NM, LP..."
+                  value={form.condition}
+                  onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select
+                  value={form.status}
+                  onValueChange={(v) => v && setForm((f) => ({ ...f, status: v as Card["status"] }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: Card["status"]) => STATUS_LABEL[v]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="available">Disponível</SelectItem>
+                    <SelectItem value="in_auction">Em leilão</SelectItem>
+                    <SelectItem value="sold">Vendida</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Descrição (opcional)</Label>
+              <Textarea
+                rows={2}
+                value={form.description}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+              />
+            </div>
+
+            {error && <p className="text-sm text-destructive">{error}</p>}
+
+            <Button type="submit" disabled={saving} className="w-full">
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Salvar
+            </Button>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
   );
+}
+
+function toFormState(card: Card | null): CardInput {
+  return {
+    name: card?.name ?? "",
+    set_name: card?.set_name ?? "",
+    card_number: card?.card_number ?? "",
+    image_url: card?.image_url ?? "",
+    condition: card?.condition ?? "",
+    description: card?.description ?? "",
+    status: card?.status ?? "available",
+    tcg_api_id: card?.tcg_api_id ?? "",
+  };
 }
