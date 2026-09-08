@@ -64,9 +64,18 @@ export type PressMention = {
   created_at: string;
 };
 
+export type Binder = {
+  id: string;
+  user_id: string;
+  name: string;
+  grid_size: string;
+  created_at: string;
+};
+
 export type BinderCard = {
   id: string;
   user_id: string;
+  binder_id: string;
   tcg_api_id: string | null;
   name: string;
   set_name: string | null;

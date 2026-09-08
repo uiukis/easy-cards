@@ -5,7 +5,7 @@ export type PermissionKey = "view_finance" | "manage_cards" | "manage_quadro" | 
 export const PERMISSION_LABEL: Record<PermissionKey, string> = {
   view_finance: "Ver valores e financeiro",
   manage_cards: "Gerenciar catálogo de cartas",
-  manage_quadro: "Gerenciar quadro (eventos, avisos, apoiadores)",
+  manage_quadro: "Gerenciar quadro (apoiadores, imprensa)",
   manage_users: "Gerenciar usuários e permissões",
 };
 

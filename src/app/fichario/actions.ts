@@ -3,13 +3,85 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function addToBinder(input: {
+export type NewBinderCard = {
   tcg_api_id: string;
   name: string;
   set_name: string;
   card_number: string;
   image_url: string;
+};
+
+export async function createBinder(input: {
+  name: string;
+  gridSize: string;
+  cards?: NewBinderCard[];
 }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const { data: binder, error } = await supabase
+    .from("binders")
+    .insert({ user_id: user.id, name: input.name || "Meu Fichário", grid_size: input.gridSize })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+
+  if (input.cards && input.cards.length > 0) {
+    const rows = input.cards.map((c, i) => ({
+      user_id: user.id,
+      binder_id: binder.id,
+      tcg_api_id: c.tcg_api_id || null,
+      name: c.name,
+      set_name: c.set_name || null,
+      card_number: c.card_number || null,
+      image_url: c.image_url,
+      position: i,
+    }));
+    const { error: insertError } = await supabase.from("binder_cards").insert(rows);
+    if (insertError) throw new Error(insertError.message);
+  }
+
+  revalidatePath("/fichario");
+  return binder;
+}
+
+export async function deleteBinder(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("binders").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+}
+
+export async function renameBinder(id: string, name: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("binders").update({ name }).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+}
+
+export async function updateGridSize(binderId: string, gridSize: string) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("binders")
+    .update({ grid_size: gridSize })
+    .eq("id", binderId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+}
+
+export async function addToBinder(
+  binderId: string,
+  input: {
+    tcg_api_id: string;
+    name: string;
+    set_name: string;
+    card_number: string;
+    image_url: string;
+  }
+) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,10 +91,11 @@ export async function addToBinder(input: {
   const { count } = await supabase
     .from("binder_cards")
     .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
+    .eq("binder_id", binderId);
 
   const { error } = await supabase.from("binder_cards").insert({
     user_id: user.id,
+    binder_id: binderId,
     tcg_api_id: input.tcg_api_id || null,
     name: input.name,
     set_name: input.set_name || null,
@@ -64,19 +137,5 @@ export async function swapBinderCards(idA: string, idB: string) {
     .eq("id", b.id);
   if (errorB) throw new Error(errorB.message);
 
-  revalidatePath("/fichario");
-}
-
-export async function updateGridSize(gridSize: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Não autenticado.");
-
-  const { error } = await supabase
-    .from("binder_settings")
-    .upsert({ user_id: user.id, grid_size: gridSize, updated_at: new Date().toISOString() });
-  if (error) throw new Error(error.message);
   revalidatePath("/fichario");
 }

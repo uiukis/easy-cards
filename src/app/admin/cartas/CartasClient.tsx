@@ -32,6 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const STATUS_LABEL: Record<Card["status"], string> = {
   available: "Disponível",
@@ -58,13 +59,14 @@ export function CartasClient({
   const [editing, setEditing] = useState<Card | "new" | null>(null);
   const [financeFor, setFinanceFor] = useState<Card | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
-    if (!confirm("Remover essa carta?")) return;
     setDeletingId(id);
     await deleteCard(id);
     setCards((prev) => prev.filter((c) => c.id !== id));
     setDeletingId(null);
+    setConfirmDeleteId(null);
   }
 
   return (
@@ -143,7 +145,7 @@ export function CartasClient({
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => handleDelete(card.id)}
+                        onClick={() => setConfirmDeleteId(card.id)}
                         disabled={deletingId === card.id}
                       >
                         {deletingId === card.id ? (
@@ -181,6 +183,17 @@ export function CartasClient({
           onSaved={() => window.location.reload()}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        onOpenChange={(v) => !v && setConfirmDeleteId(null)}
+        title="Remover essa carta?"
+        description="Essa ação não pode ser desfeita."
+        confirmLabel="Remover"
+        destructive
+        loading={deletingId !== null}
+        onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+      />
     </div>
   );
 }
