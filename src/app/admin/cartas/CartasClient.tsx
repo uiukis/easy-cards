@@ -40,6 +40,15 @@ const STATUS_LABEL: Record<Card["status"], string> = {
   sold: "Vendida",
 };
 
+const CONDITION_OPTIONS = [
+  { value: "M", label: "M — Mint" },
+  { value: "NM", label: "NM — Near Mint" },
+  { value: "SP", label: "SP — Slightly Played" },
+  { value: "MP", label: "MP — Moderately Played" },
+  { value: "HP", label: "HP — Heavily Played" },
+  { value: "DMG", label: "DMG — Danificada" },
+];
+
 const STATUS_VARIANT: Record<Card["status"], "secondary" | "default" | "outline"> = {
   available: "secondary",
   in_auction: "default",
@@ -367,11 +376,21 @@ function CardModal({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Condição</Label>
-                <Input
-                  placeholder="NM, LP..."
+                <Select
                   value={form.condition}
-                  onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
-                />
+                  onValueChange={(v) => v && setForm((f) => ({ ...f, condition: v }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{(v: string) => v || "Selecionar"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONDITION_OPTIONS.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Status</Label>

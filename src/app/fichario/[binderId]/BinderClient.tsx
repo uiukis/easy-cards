@@ -14,14 +14,42 @@ import {
   ArrowLeft,
   Pencil,
   Check,
+  Tag,
+  Share2,
+  ArrowDownUp,
+  Copy,
 } from "lucide-react";
 import type { Binder, BinderCard } from "@/lib/supabase/types";
 import { CardSearch, type SearchResult } from "@/app/admin/cartas/CardSearch";
-import { addToBinder, removeFromBinder, swapBinderCards, updateGridSize, renameBinder } from "../actions";
+import {
+  addToBinder,
+  removeFromBinder,
+  swapBinderCards,
+  updateGridSize,
+  renameBinder,
+  setBinderShared,
+  reorderBinder,
+} from "../actions";
+import { PriceBadge } from "../PriceBadge";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const SORT_OPTIONS: Record<string, string> = {
+  custom: "Personalizado",
+  name: "Nome (A-Z)",
+  set: "Set",
+  number: "Número",
+};
 
 const GRID_SIZES: Record<string, { cols: number; rows: number; label: string }> = {
   "2x2": { cols: 2, rows: 2, label: "2×2" },
@@ -49,6 +77,14 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [showPrices, setShowPrices] = useState(true);
+  const [sortKey, setSortKey] = useState("custom");
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareEnabled, setShareEnabled] = useState(binder.share_enabled);
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/b/${binder.id}` : `/b/${binder.id}`;
 
   const { cols, rows } = GRID_SIZES[gridSize];
   const cardsPerPage = cols * rows;
@@ -77,6 +113,40 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     setName(trimmed);
     setEditingName(false);
     await renameBinder(binder.id, trimmed);
+  }
+
+  function handleSort(key: string) {
+    setSortKey(key);
+    if (key === "custom") return;
+    const sorted = [...cards].sort((a, b) => {
+      if (key === "name") return a.name.localeCompare(b.name);
+      if (key === "set") return (a.set_name ?? "").localeCompare(b.set_name ?? "");
+      if (key === "number") {
+        const na = parseInt(a.card_number?.split("/")[0] ?? "0", 10) || 0;
+        const nb = parseInt(b.card_number?.split("/")[0] ?? "0", 10) || 0;
+        return na - nb;
+      }
+      return 0;
+    });
+    setCards(sorted);
+    reorderBinder(
+      binder.id,
+      sorted.map((c) => c.id)
+    );
+  }
+
+  async function handleShareToggle(v: boolean) {
+    setSharing(true);
+    setShareEnabled(v);
+    await setBinderShared(binder.id, v);
+    setSharing(false);
+  }
+
+  function handleCopyLink() {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   }
 
   async function handleSelect(result: SearchResult) {
@@ -201,10 +271,16 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
             Monte sua vitrine de cartas — sua coleção, do seu jeito.
           </p>
         </div>
-        <Button onClick={() => setSearchOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Adicionar carta
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShareOpen(true)}>
+            <Share2 className="h-4 w-4" />
+            Compartilhar
+          </Button>
+          <Button onClick={() => setSearchOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Adicionar carta
+          </Button>
+        </div>
       </div>
 
       {cards.length === 0 ? (
@@ -235,6 +311,33 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                 </button>
               ))}
             </div>
+
+            <button
+              onClick={() => setShowPrices((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-xs font-bold transition-colors ${
+                showPrices
+                  ? "border-orange bg-orange/10 text-orange-deep"
+                  : "border-ink/10 text-ink-muted hover:text-ink"
+              }`}
+              title="Preço de referência via Liga Pokémon"
+            >
+              <Tag className="h-3.5 w-3.5" />
+              Preços
+            </button>
+
+            <Select value={sortKey} onValueChange={(v) => v && handleSort(v)}>
+              <SelectTrigger className="h-auto rounded-full border-2 border-ink/10 py-1.5">
+                <ArrowDownUp className="h-3.5 w-3.5 text-ink-muted" />
+                <SelectValue>{(v: string) => SORT_OPTIONS[v]}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(SORT_OPTIONS).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {totalPages > 1 && (
               <div className="flex items-center gap-2">
@@ -307,6 +410,11 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                       <Trash2 className="h-3.5 w-3.5" />
                     )}
                   </button>
+                  {showPrices && (
+                    <div className="absolute bottom-1 left-1">
+                      <PriceBadge name={card.name} cardNumber={card.card_number} />
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -338,6 +446,32 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
           ) : (
             <CardSearch onSelect={handleSelect} />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display tracking-wide">COMPARTILHAR</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="flex items-center justify-between gap-3 rounded-xl border-2 border-ink/10 p-3">
+              <div>
+                <p className="text-sm font-semibold text-ink">Link público</p>
+                <p className="text-xs text-ink-muted">Qualquer pessoa com o link pode ver, sem conta.</p>
+              </div>
+              <Switch checked={shareEnabled} onCheckedChange={handleShareToggle} disabled={sharing} />
+            </label>
+
+            {shareEnabled && (
+              <div className="flex items-center gap-2">
+                <Input readOnly value={shareUrl} className="text-xs" />
+                <Button variant="outline" size="icon" onClick={handleCopyLink} aria-label="Copiar link">
+                  {copied ? <Check className="h-4 w-4 text-teal" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

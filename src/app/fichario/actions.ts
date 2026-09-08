@@ -72,6 +72,27 @@ export async function updateGridSize(binderId: string, gridSize: string) {
   revalidatePath("/fichario");
 }
 
+export async function setBinderShared(binderId: string, enabled: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("binders")
+    .update({ share_enabled: enabled })
+    .eq("id", binderId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+  revalidatePath(`/b/${binderId}`);
+}
+
+export async function reorderBinder(binderId: string, orderedIds: string[]) {
+  const supabase = await createClient();
+  await Promise.all(
+    orderedIds.map((id, position) =>
+      supabase.from("binder_cards").update({ position }).eq("id", id).eq("binder_id", binderId)
+    )
+  );
+  revalidatePath("/fichario");
+}
+
 export async function addToBinder(
   binderId: string,
   input: {

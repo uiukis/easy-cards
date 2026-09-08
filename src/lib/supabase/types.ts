@@ -69,6 +69,7 @@ export type Binder = {
   user_id: string;
   name: string;
   grid_size: string;
+  share_enabled: boolean;
   created_at: string;
 };
 
