@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { LogoutButton } from "./LogoutButton";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -98,7 +99,10 @@ function Footer({
     <div className="mt-6 border-t-2 border-ink/10 pt-4">
       <p className="truncate px-1 text-xs font-semibold text-ink">{fullName}</p>
       <p className="px-1 text-[11px] text-ink-muted">{roleLabel}</p>
-      <LogoutButton className="mt-2 w-full justify-start" />
+      <div className="mt-2 flex items-center gap-2">
+        <LogoutButton className="flex-1 justify-start" />
+        <ThemeToggle />
+      </div>
       <p className="mt-2 px-1 text-[10px] text-ink-muted/60">v{version}</p>
     </div>
   );
@@ -135,13 +139,16 @@ export function AdminNav({
           />
           <Wordmark />
         </Link>
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Abrir menu"
-          className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink/10 bg-surface text-ink transition-transform active:scale-95"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Abrir menu"
+            className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink/10 bg-surface text-ink transition-transform active:scale-95"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       {/* mobile drawer */}
