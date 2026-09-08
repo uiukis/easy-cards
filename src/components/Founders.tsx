@@ -23,37 +23,35 @@ export function Founders() {
           </h2>
         </motion.div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {FOUNDERS.map((f, i) => (
-            <motion.div
+            <motion.a
               key={f.name}
+              href={f.instagram}
+              target="_blank"
+              rel="noopener noreferrer"
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="rounded-2xl border-2 border-ink/10 bg-surface p-6"
+              transition={{ duration: 0.5, delay: i * 0.08 }}
+              className="group flex items-center gap-4 rounded-2xl border-2 border-ink/10 bg-surface p-5 transition-transform hover:-translate-y-0.5 hover:shadow-md"
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-display text-lg tracking-wide text-ink">
-                    {f.name.toUpperCase()}
-                  </h3>
-                  <p className="text-xs font-bold uppercase tracking-widest text-orange-deep">
-                    {f.role}
-                  </p>
-                </div>
-                <a
-                  href={f.instagram}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`Instagram de ${f.name}`}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-ink/10 text-ink-muted transition-colors hover:border-orange hover:text-orange-deep"
-                >
-                  <InstagramIcon className="h-4 w-4" />
-                </a>
+              {/* eslint-disable-next-line @next/next/no-img-element -- Instagram profile photos */}
+              <img
+                src={f.image}
+                alt={f.name}
+                className="h-16 w-16 shrink-0 rounded-full border-2 border-ink/10 object-cover"
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate font-display text-lg tracking-wide text-ink">
+                  {f.name.toUpperCase()}
+                </h3>
+                <p className="text-xs font-bold uppercase tracking-widest text-orange-deep">
+                  {f.role}
+                </p>
               </div>
-              <p className="mt-3 text-sm text-ink-muted">{f.bio}</p>
-            </motion.div>
+              <InstagramIcon className="h-5 w-5 shrink-0 text-ink-muted transition-colors group-hover:text-orange-deep" />
+            </motion.a>
           ))}
         </div>
       </div>

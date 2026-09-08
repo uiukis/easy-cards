@@ -23,17 +23,50 @@ export const LARA_INSTAGRAM = "https://www.instagram.com/larita.tcg/";
 export const EVENT_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLSfF8F_p1OM5NWIbFaAcpmvPoOKHKVNHUxhT5S2QeyRBY9lwWQ/viewform";
 
+const TEAM_PHOTO_BASE =
+  "https://fraxsrwhpbcwikghzcpe.supabase.co/storage/v1/object/public/team";
+
 export const FOUNDERS = [
   {
     name: "Bão Santos",
-    role: "Fundador",
+    role: "CEO",
     instagram: "https://www.instagram.com/baosantoss/",
-    bio: "Comecei a Easy Cards porque queria um jeito mais simples de comprar, vender e trocar cards com quem realmente entende do assunto. Ainda tô aprendendo bastante nessa jornada, mas o objetivo sempre foi construir uma comunidade de verdade — não só uma loja.",
+    image: `${TEAM_PHOTO_BASE}/bao-santos.jpg`,
   },
   {
     name: "Emanoel Sátiro",
-    role: "Cofundador",
+    role: "CEO",
     instagram: "https://www.instagram.com/emanoelsatiro_/",
-    bio: "Entrei pra ajudar a tirar a Easy Cards do papel e dar uma força em tudo que for preciso — do atendimento à parte financeira. Curto ver a comunidade crescendo e conhecer gente nova que também é apaixonada por Pokémon TCG.",
+    image: `${TEAM_PHOTO_BASE}/emanoel-satiro.jpg`,
+  },
+  {
+    name: "Victoria Silva",
+    role: "COO",
+    instagram: "https://www.instagram.com/torywins_/",
+    image: `${TEAM_PHOTO_BASE}/tory-silva.jpg`,
+  },
+  {
+    name: "Wilker Quirino",
+    role: "CTO",
+    instagram: "https://www.instagram.com/_uiukis/",
+    image: `${TEAM_PHOTO_BASE}/wilker-quirino.jpg`,
+  },
+  {
+    name: "Amanda Souza",
+    role: "Coordenadora e Assessoria",
+    instagram: "https://www.instagram.com/amanda.sm.br/",
+    image: `${TEAM_PHOTO_BASE}/amanda-souza.jpg`,
+  },
+  {
+    name: "Lara Lima",
+    role: "Host e Influenciadora",
+    instagram: "https://www.instagram.com/larita.tcg/",
+    image: `${TEAM_PHOTO_BASE}/lara-lima.jpg`,
+  },
+  {
+    name: "Beatriz Giffoni",
+    role: "Mídias",
+    instagram: "https://www.instagram.com/sbia.jpg/",
+    image: `${TEAM_PHOTO_BASE}/beatriz-giffoni.jpg`,
   },
 ] as const;
