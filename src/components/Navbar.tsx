@@ -8,6 +8,7 @@ import { User } from "lucide-react";
 import { SITE } from "@/lib/site";
 import { WhatsAppIcon } from "./icons";
 import { ThemeToggle } from "./ThemeToggle";
+import { Badge } from "@/components/ui/badge";
 
 const LINKS = [
   { href: "/#sobre", label: "Sobre" },
@@ -15,6 +16,7 @@ const LINKS = [
   { href: "/#leiloes", label: "Leilões" },
   { href: "/#comunidade", label: "Comunidade" },
   { href: "/imprensa", label: "Na mídia" },
+  { href: "/fichario", label: "Fichário", beta: true },
 ];
 
 export function Navbar() {
@@ -50,14 +52,22 @@ export function Navbar() {
           </span>
         </Link>
 
-        <div className="hidden items-center gap-7 md:flex">
+        <div className="hidden items-center gap-4 md:flex lg:gap-6">
           {LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-semibold text-ink-muted transition-colors hover:text-ink"
+              className="flex items-center gap-1 whitespace-nowrap text-[13px] font-semibold text-ink-muted transition-colors hover:text-ink lg:text-sm"
             >
               {link.label}
+              {link.beta && (
+                <Badge
+                  variant="secondary"
+                  className="translate-y-px font-comic text-[10px] leading-none tracking-wide"
+                >
+                  beta
+                </Badge>
+              )}
             </Link>
           ))}
         </div>
