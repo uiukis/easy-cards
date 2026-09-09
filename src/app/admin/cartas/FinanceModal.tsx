@@ -55,6 +55,14 @@ export function FinanceModal({
   const [soldDate, setSoldDate] = useState(finance?.sold_at?.slice(0, 10) ?? todayISO());
   const [paid, setPaid] = useState(!!finance?.paid_at);
   const [paidDate, setPaidDate] = useState(finance?.paid_at?.slice(0, 10) ?? todayISO());
+  const [consignorName, setConsignorName] = useState(finance?.consignor_name ?? "");
+  const [commissionPct, setCommissionPct] = useState(
+    finance?.commission_pct != null ? String(finance.commission_pct) : ""
+  );
+  const [consignorPaid, setConsignorPaid] = useState(!!finance?.consignor_paid_at);
+  const [consignorPaidDate, setConsignorPaidDate] = useState(
+    finance?.consignor_paid_at?.slice(0, 10) ?? todayISO()
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +84,10 @@ export function FinanceModal({
         notes,
         mark_sold: markSold,
         sold_date: soldDate,
+        consignor_name: consignorName,
+        commission_pct: commissionPct.replace(",", "."),
+        consignor_paid: consignorPaid,
+        consignor_paid_date: consignorPaidDate,
       });
       onSaved();
     } catch (err) {
@@ -189,6 +201,47 @@ export function FinanceModal({
               <Input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
             </div>
           )}
+
+          <div className="rounded-xl border-2 border-ink/10 p-3">
+            <p className="text-sm font-semibold text-ink">Consignação (carta de terceiro)</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Dono da carta</Label>
+                <Input
+                  value={consignorName}
+                  onChange={(e) => setConsignorName(e.target.value)}
+                  placeholder="Nome"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Comissão Easy Cards (%)</Label>
+                <Input
+                  inputMode="decimal"
+                  value={commissionPct}
+                  onChange={(e) => setCommissionPct(e.target.value.replace(/[^0-9.,]/g, ""))}
+                  placeholder="15"
+                />
+              </div>
+            </div>
+            {consignorName && (
+              <>
+                <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                  <Switch checked={consignorPaid} onCheckedChange={setConsignorPaid} />
+                  Já repassei pro dono
+                </label>
+                {consignorPaid && (
+                  <div className="mt-2 space-y-1.5">
+                    <Label className="text-xs">Data do repasse</Label>
+                    <Input
+                      type="date"
+                      value={consignorPaidDate}
+                      onChange={(e) => setConsignorPaidDate(e.target.value)}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 

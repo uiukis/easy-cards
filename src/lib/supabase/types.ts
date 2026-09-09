@@ -86,6 +86,9 @@ export type CardFinance = {
   paid_at: string | null;
   buyer_confirmed_at: string | null;
   buyer_disputed_at: string | null;
+  consignor_name: string | null;
+  commission_pct: number | null;
+  consignor_paid_at: string | null;
   notes: string | null;
   updated_by: string | null;
   updated_at: string;

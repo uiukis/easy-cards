@@ -26,6 +26,9 @@ type FinRow = {
   sold_at: string | null;
   paid_at: string | null;
   buyer_disputed_at: string | null;
+  consignor_name: string | null;
+  commission_pct: number | null;
+  consignor_paid_at: string | null;
   cards: { name: string; status: string } | { name: string; status: string }[] | null;
 };
 
@@ -62,7 +65,7 @@ export default async function FinanceiroPage() {
   const { data } = await supabase
     .from("card_finance")
     .select(
-      "card_id, final_price, delivery_method, dominaria_fee, dominaria_deposited_at, buyer_id, buyer_name, sold_at, paid_at, buyer_disputed_at, cards(name, status)"
+      "card_id, final_price, delivery_method, dominaria_fee, dominaria_deposited_at, buyer_id, buyer_name, sold_at, paid_at, buyer_disputed_at, consignor_name, commission_pct, consignor_paid_at, cards(name, status)"
     );
   const rows = (data ?? []) as FinRow[];
 
@@ -82,6 +85,13 @@ export default async function FinanceiroPage() {
   const receivableTotal = receivable.reduce((s, r) => s + num(r.final_price), 0);
 
   const disputed = rows.filter((r) => r.buyer_disputed_at);
+
+  const consignOwed = sold.filter(
+    (r) => r.consignor_name && r.paid_at && !r.consignor_paid_at
+  );
+  const consignShare = (r: FinRow) =>
+    num(r.final_price) * (1 - num(r.commission_pct) / 100);
+  const consignTotal = consignOwed.reduce((s, r) => s + consignShare(r), 0);
 
   const domiFees = rows
     .filter((r) => r.delivery_method === "dominaria")
@@ -244,6 +254,40 @@ export default async function FinanceiroPage() {
             )}
           </CardContent>
         </Card>
+
+        {consignOwed.length > 0 && (
+          <Card>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-orange-deep" />
+                <h2 className="font-display text-sm tracking-wide text-ink">
+                  A REPASSAR (CONSIGNAÇÃO) · {brl(consignTotal)}
+                </h2>
+              </div>
+              <ul className="mt-4 space-y-2.5">
+                {consignOwed.map((r) => (
+                  <li
+                    key={r.card_id}
+                    className="flex items-center justify-between gap-3 text-sm"
+                  >
+                    <Link href={`/admin/cartas?finance=${r.card_id}`} className="group min-w-0 flex-1">
+                      <p className="truncate font-semibold text-ink group-hover:underline">
+                        {cardName(r)}
+                      </p>
+                      <p className="text-xs text-ink-muted">
+                        {r.consignor_name}
+                        {r.commission_pct != null ? ` · ${r.commission_pct}% comissão` : ""}
+                      </p>
+                    </Link>
+                    <span className="shrink-0 font-semibold text-orange-deep">
+                      {brl(consignShare(r))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardContent>

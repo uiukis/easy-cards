@@ -16,6 +16,10 @@ export type CardFinanceInput = {
   notes: string;
   mark_sold: boolean;
   sold_date: string;
+  consignor_name: string;
+  commission_pct: string;
+  consignor_paid: boolean;
+  consignor_paid_date: string;
 };
 
 export async function upsertCardFinance(cardId: string, input: CardFinanceInput) {
@@ -43,6 +47,11 @@ export async function upsertCardFinance(cardId: string, input: CardFinanceInput)
       sold_at: input.mark_sold ? new Date(input.sold_date || Date.now()).toISOString() : null,
       paid_at: input.paid ? input.paid_date || new Date().toISOString().slice(0, 10) : null,
       notes: input.notes || null,
+      consignor_name: input.consignor_name?.trim() || null,
+      commission_pct: input.commission_pct ? Number(input.commission_pct) : null,
+      consignor_paid_at: input.consignor_paid
+        ? input.consignor_paid_date || new Date().toISOString().slice(0, 10)
+        : null,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
     },
