@@ -1,9 +1,14 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.27.0**.
+Datas no fuso de Brasília. Versão atual: **1.28.0**.
 
 ---
+
+## 1.28.0 — Galeria de cartas · 09/09/2026
+
+- Nova página pública **`/cartas`** (link na navbar): explorador da base completa do TCG. Busca por nome, filtro de tipo / raridade / set, grade com a arte (cartas raras ganham o brilho holo), e ao clicar abre o detalhe com **arte em alta, set, número, raridade, ilustrador e o texto de sabor**.
+- Quem tá logado tem **"adicionar ao fichário"** direto do detalhe.
 
 ## 1.26.0 — Login só pelo telefone · 09/09/2026
 
