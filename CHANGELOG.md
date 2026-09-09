@@ -1,9 +1,17 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.16.0**.
+Datas no fuso de Brasília. Versão atual: **1.17.0**.
 
 ---
+
+## 1.17.0 — Vitrine e alerta de desejo · 09/09/2026
+
+- **Vitrine pública (`/loja`)**: uma página com as cartas marcadas "à venda", com busca e filtro por set. Quem quiser clica em **"quero essa"** e cai no WhatsApp já com a carta escrita.
+- **Liga/desliga a vitrine** com um botão em *Cartas* — vem **desligada** (a gente ainda não trabalha com estoque). Enquanto tá desligada, a `/loja` nem existe.
+- No cadastro da carta tem a opção **"à venda"** + preço opcional na vitrine (vazio = "consultar").
+- **Alerta de lista de desejo**: em *Cartas*, aparece **"3 querem"** na carta que bate com a lista de desejo de alguém. Clica e vê quem é, com botão de WhatsApp já escrito ("apareceu a carta que tá na sua lista 👀").
+- **Fichário convidado agora é 1 só** — pra ter mais, criar conta.
 
 ## 1.16.0 — Editar telefone · 09/09/2026
 
