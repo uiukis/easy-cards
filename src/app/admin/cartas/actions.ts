@@ -44,6 +44,9 @@ export async function createCard(input: CardInput) {
 
 export async function updateCard(id: string, input: CardInput) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { error } = await supabase
     .from("cards")
@@ -57,6 +60,7 @@ export async function updateCard(id: string, input: CardInput) {
       status: input.status,
       in_stock: input.in_stock,
       price: input.price ? Number(input.price) : null,
+      updated_by: user?.id ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);

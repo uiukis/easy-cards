@@ -62,6 +62,26 @@ const CONDITION_OPTIONS = [
   { value: "DMG", label: "DMG — Danificada" },
 ];
 
+function shortDate(iso: string | null) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+
+function historyLine(card: Card, people: Record<string, string>): string {
+  const creator = card.created_by ? people[card.created_by] : null;
+  let line = creator
+    ? `cadastrada por ${creator.split(" ")[0]} · ${shortDate(card.created_at)}`
+    : `cadastrada em ${shortDate(card.created_at)}`;
+  const editedLater =
+    card.updated_at &&
+    new Date(card.updated_at).getTime() - new Date(card.created_at).getTime() > 60_000;
+  if (editedLater && card.updated_by) {
+    const editor = people[card.updated_by];
+    line += ` · editada por ${editor ? editor.split(" ")[0] : "?"} · ${shortDate(card.updated_at)}`;
+  }
+  return line;
+}
+
 const STATUS_VARIANT: Record<Card["status"], "secondary" | "default" | "outline"> = {
   available: "secondary",
   in_auction: "default",
@@ -82,6 +102,7 @@ export function CartasClient({
   openFinanceCardId = null,
   shopEnabled = false,
   wishlistMatches = {},
+  peopleById = {},
 }: {
   initialCards: Card[];
   canViewFinance: boolean;
@@ -89,6 +110,7 @@ export function CartasClient({
   openFinanceCardId?: string | null;
   shopEnabled?: boolean;
   wishlistMatches?: Record<string, WishMatch[]>;
+  peopleById?: Record<string, string>;
 }) {
   const router = useRouter();
   const [cards, setCards] = useState(initialCards);
@@ -385,6 +407,9 @@ export function CartasClient({
                         </button>
                       )}
                     </p>
+                    <p className="mt-0.5 text-[11px] text-ink-muted/70">
+                      {historyLine(card, peopleById)}
+                    </p>
                   </div>
 
                   <Badge
@@ -579,6 +604,7 @@ function CardModal({
           status: form.status,
           in_stock: form.in_stock,
           price: payload.price ? Number(payload.price) : null,
+          updated_at: new Date().toISOString(),
         });
       } else {
         await createCard(payload);

@@ -27,11 +27,15 @@ export default async function CartasPage({
   const permissions = await getEffectivePermissions(supabase, user.id, viewerProfile.role);
   if (!permissions.manage_cards) redirect("/admin");
 
-  const [{ data: cards }, { data: shopSetting }] = await Promise.all([
+  const [{ data: cards }, { data: shopSetting }, { data: people }] = await Promise.all([
     supabase.from("cards").select("*").order("created_at", { ascending: false }),
     supabase.from("site_settings").select("value").eq("key", "shop_enabled").maybeSingle(),
+    supabase.from("profiles").select("id, full_name"),
   ]);
   const shopEnabled = shopSetting?.value === true;
+  const peopleById: Record<string, string> = Object.fromEntries(
+    (people ?? []).map((p) => [p.id, p.full_name ?? "—"])
+  );
 
   let financeByCardId: Record<string, CardFinance> = {};
   if (permissions.view_finance) {
@@ -90,6 +94,7 @@ export default async function CartasPage({
       openFinanceCardId={permissions.view_finance ? financeParam ?? null : null}
       shopEnabled={shopEnabled}
       wishlistMatches={wishlistMatches}
+      peopleById={peopleById}
     />
   );
 }
