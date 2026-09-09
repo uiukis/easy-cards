@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Handshake, Newspaper, Plus, Trash2, Eye } from "lucide-react";
+import { Handshake, Newspaper, Plus, Trash2, Eye, Pencil, X } from "lucide-react";
 import type { Supporter, PressMention } from "@/lib/supabase/types";
 import {
   createSupporter,
+  updateSupporter,
   toggleSupporter,
   deleteSupporter,
   createPressMention,
+  updatePressMention,
   togglePressMention,
   deletePressMention,
 } from "./actions";
@@ -74,31 +76,56 @@ export function QuadroClient({
 
 function ApoiadoresTab({ initial }: { initial: Supporter[] }) {
   const [items, setItems] = useState(initial);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [instagram, setInstagram] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSaving(true);
-    await createSupporter({ name, instagram, image_url: imageUrl });
-    setItems((prev) => [
-      {
-        id: crypto.randomUUID(),
-        name,
-        instagram: instagram || null,
-        image_url: imageUrl || null,
-        active: true,
-        sort_order: 0,
-        created_at: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
+  function resetForm() {
+    setEditingId(null);
     setName("");
     setInstagram("");
     setImageUrl("");
+  }
+
+  function startEdit(s: Supporter) {
+    setEditingId(s.id);
+    setName(s.name);
+    setInstagram(s.instagram ?? "");
+    setImageUrl(s.image_url ?? "");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    if (editingId) {
+      await updateSupporter(editingId, { name, instagram, image_url: imageUrl });
+      setItems((prev) =>
+        prev.map((x) =>
+          x.id === editingId
+            ? { ...x, name, instagram: instagram || null, image_url: imageUrl || null }
+            : x
+        )
+      );
+    } else {
+      await createSupporter({ name, instagram, image_url: imageUrl });
+      setItems((prev) => [
+        {
+          id: crypto.randomUUID(),
+          name,
+          instagram: instagram || null,
+          image_url: imageUrl || null,
+          active: true,
+          sort_order: 0,
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+    }
+    resetForm();
     setSaving(false);
   }
 
@@ -109,7 +136,19 @@ function ApoiadoresTab({ initial }: { initial: Supporter[] }) {
       <div className="max-w-lg space-y-4">
         <Card>
           <CardContent>
-            <form onSubmit={handleAdd} className="space-y-2">
+            {editingId && (
+              <p className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wide text-orange-deep">
+                Editando apoiador
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex items-center gap-1 text-ink-muted hover:text-ink"
+                >
+                  <X className="h-3.5 w-3.5" /> cancelar
+                </button>
+              </p>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-2">
               <Input
                 placeholder="Nome do apoiador"
                 value={name}
@@ -126,7 +165,7 @@ function ApoiadoresTab({ initial }: { initial: Supporter[] }) {
                 onChange={(e) => setImageUrl(e.target.value)}
               />
               <Button type="submit" disabled={saving}>
-                <Plus className="h-4 w-4" /> Adicionar
+                <Plus className="h-4 w-4" /> {editingId ? "Salvar alterações" : "Adicionar"}
               </Button>
             </form>
           </CardContent>
@@ -176,6 +215,9 @@ function ApoiadoresTab({ initial }: { initial: Supporter[] }) {
                           }}
                         >
                           {s.active ? "ocultar" : "mostrar"}
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" onClick={() => startEdit(s)}>
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -242,6 +284,7 @@ function ApoiadoresTab({ initial }: { initial: Supporter[] }) {
 
 function ImprensaTab({ initial }: { initial: PressMention[] }) {
   const [items, setItems] = useState(initial);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [outlet, setOutlet] = useState("");
   const [outletInstagram, setOutletInstagram] = useState("");
@@ -252,7 +295,32 @@ function ImprensaTab({ initial }: { initial: PressMention[] }) {
   const [publishedDate, setPublishedDate] = useState("");
   const [saving, setSaving] = useState(false);
 
-  async function handleAdd(e: React.FormEvent) {
+  function resetForm() {
+    setEditingId(null);
+    setTitle("");
+    setOutlet("");
+    setOutletInstagram("");
+    setJournalist("");
+    setJournalistInstagram("");
+    setUrl("");
+    setImageUrl("");
+    setPublishedDate("");
+  }
+
+  function startEdit(p: PressMention) {
+    setEditingId(p.id);
+    setTitle(p.title);
+    setOutlet(p.outlet);
+    setOutletInstagram(p.outlet_instagram ?? "");
+    setJournalist(p.journalist ?? "");
+    setJournalistInstagram(p.journalist_instagram ?? "");
+    setUrl(p.url);
+    setImageUrl(p.image_url ?? "");
+    setPublishedDate(p.published_date?.slice(0, 10) ?? "");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim() || !outlet.trim() || !url.trim()) return;
     setSaving(true);
@@ -266,32 +334,46 @@ function ImprensaTab({ initial }: { initial: PressMention[] }) {
       image_url: imageUrl,
       published_date: publishedDate,
     };
-    await createPressMention(input);
-    setItems((prev) => [
-      {
-        id: crypto.randomUUID(),
-        title,
-        outlet,
-        outlet_instagram: outletInstagram || null,
-        journalist: journalist || null,
-        journalist_instagram: journalistInstagram || null,
-        url,
-        image_url: imageUrl || null,
-        published_date: publishedDate || null,
-        active: true,
-        sort_order: 0,
-        created_at: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-    setTitle("");
-    setOutlet("");
-    setOutletInstagram("");
-    setJournalist("");
-    setJournalistInstagram("");
-    setUrl("");
-    setImageUrl("");
-    setPublishedDate("");
+    if (editingId) {
+      await updatePressMention(editingId, input);
+      setItems((prev) =>
+        prev.map((x) =>
+          x.id === editingId
+            ? {
+                ...x,
+                title,
+                outlet,
+                outlet_instagram: outletInstagram || null,
+                journalist: journalist || null,
+                journalist_instagram: journalistInstagram || null,
+                url,
+                image_url: imageUrl || null,
+                published_date: publishedDate || null,
+              }
+            : x
+        )
+      );
+    } else {
+      await createPressMention(input);
+      setItems((prev) => [
+        {
+          id: crypto.randomUUID(),
+          title,
+          outlet,
+          outlet_instagram: outletInstagram || null,
+          journalist: journalist || null,
+          journalist_instagram: journalistInstagram || null,
+          url,
+          image_url: imageUrl || null,
+          published_date: publishedDate || null,
+          active: true,
+          sort_order: 0,
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
+    }
+    resetForm();
     setSaving(false);
   }
 
@@ -302,7 +384,19 @@ function ImprensaTab({ initial }: { initial: PressMention[] }) {
       <div className="max-w-lg space-y-4">
         <Card>
           <CardContent>
-            <form onSubmit={handleAdd} className="space-y-2">
+            {editingId && (
+              <p className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wide text-orange-deep">
+                Editando matéria
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex items-center gap-1 text-ink-muted hover:text-ink"
+                >
+                  <X className="h-3.5 w-3.5" /> cancelar
+                </button>
+              </p>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-2">
               <Input
                 placeholder="Título da matéria"
                 value={title}
@@ -348,7 +442,7 @@ function ImprensaTab({ initial }: { initial: PressMention[] }) {
                 onChange={(e) => setPublishedDate(e.target.value)}
               />
               <Button type="submit" disabled={saving}>
-                <Plus className="h-4 w-4" /> Adicionar
+                <Plus className="h-4 w-4" /> {editingId ? "Salvar alterações" : "Adicionar"}
               </Button>
             </form>
           </CardContent>
@@ -400,6 +494,9 @@ function ImprensaTab({ initial }: { initial: PressMention[] }) {
                           }}
                         >
                           {p.active ? "ocultar" : "mostrar"}
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" onClick={() => startEdit(p)}>
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"

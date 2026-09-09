@@ -26,6 +26,23 @@ export async function createSupporter(input: {
   refresh();
 }
 
+export async function updateSupporter(
+  id: string,
+  input: { name: string; instagram: string; image_url: string }
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("supporters")
+    .update({
+      name: input.name,
+      instagram: input.instagram || null,
+      image_url: input.image_url || null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  refresh();
+}
+
 export async function toggleSupporter(id: string, active: boolean) {
   const supabase = await createClient();
   const { error } = await supabase.from("supporters").update({ active }).eq("id", id);
@@ -63,6 +80,25 @@ export async function createPressMention(input: PressMentionInput) {
     image_url: input.image_url || null,
     published_date: input.published_date || null,
   });
+  if (error) throw new Error(error.message);
+  refresh();
+}
+
+export async function updatePressMention(id: string, input: PressMentionInput) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("press_mentions")
+    .update({
+      title: input.title,
+      outlet: input.outlet,
+      outlet_instagram: input.outlet_instagram || null,
+      journalist: input.journalist || null,
+      journalist_instagram: input.journalist_instagram || null,
+      url: input.url,
+      image_url: input.image_url || null,
+      published_date: input.published_date || null,
+    })
+    .eq("id", id);
   if (error) throw new Error(error.message);
   refresh();
 }
