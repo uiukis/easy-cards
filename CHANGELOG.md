@@ -1,9 +1,17 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.35.0**.
+Datas no fuso de Brasília. Versão atual: **1.36.0**.
 
 ---
+
+## 1.36.0 — Perfil de colecionador + social no fichário · 09/09/2026
+
+- **Perfil de colecionador** em `/u/<user>` — além da lista de desejo, mostra os fichários públicos da pessoa (com % do set), quantas cartas ela organizou e desde quando é da comunidade.
+- **Curtir e comentar** em fichário compartilhado (`/b/<id>`). O dono recebe um aviso no site quando alguém curte ou comenta.
+- **Painel → "Precisa de olho"**: um card na entrada com compras contestadas, repasse de consignação pendente e atividade sem resolver.
+- **Painel → Usuários**: cada pessoa mostra uma linha "Vê:" com exatamente o que ela enxerga no painel (resolvendo permissão de cargo + ajuste individual).
+- **Foto real da carta**: no financeiro dá pra anexar uma foto da condição real da carta; o comprador vê em "Minhas cartas".
 
 ## 1.35.0 — Tenho pra troca · 09/09/2026
 
