@@ -8,6 +8,7 @@ import packageJson from "../../../package.json";
 const NAV: (AdminNavItem & { permission?: PermissionKey; ctoOnly?: boolean })[] = [
   { href: "/admin", label: "Painel", icon: "LayoutDashboard" },
   { href: "/admin/cartas", label: "Cartas", icon: "CreditCard", permission: "manage_cards" },
+  { href: "/admin/financeiro", label: "Financeiro", icon: "HandCoins", permission: "view_finance" },
   { href: "/admin/quadro", label: "Quadro", icon: "Megaphone", permission: "manage_quadro" },
   { href: "/admin/usuarios", label: "Usuários", icon: "Users", permission: "manage_users" },
   { href: "/admin/permissoes", label: "Permissões", icon: "Lock", ctoOnly: true },

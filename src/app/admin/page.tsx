@@ -11,6 +11,7 @@ import {
   Megaphone,
   Users,
   PackageOpen,
+  HandCoins,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEffectivePermissions } from "@/lib/get-permissions";
@@ -90,6 +91,12 @@ export default async function AdminDashboard() {
       label: "Nova carta",
       icon: Plus,
       className: "bg-orange-deep text-white shadow-orange-deep/25",
+    },
+    permissions.view_finance && {
+      href: "/admin/financeiro",
+      label: "Financeiro",
+      icon: HandCoins,
+      className: "border-2 border-ink/15 bg-surface text-ink hover:bg-surface-alt",
     },
     permissions.manage_quadro && {
       href: "/admin/quadro",

@@ -10,6 +10,7 @@ import {
   X,
   LayoutDashboard,
   CreditCard,
+  HandCoins,
   Users,
   Megaphone,
   UserCog,
@@ -26,6 +27,7 @@ import { LogoutButton } from "./LogoutButton";
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard,
   CreditCard,
+  HandCoins,
   Users,
   Megaphone,
   UserCog,
