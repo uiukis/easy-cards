@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Sparkles, Eye, EyeOff, KeyRound } from "lucide-react";
+import { Loader2, Sparkles, Eye, EyeOff, KeyRound, Phone } from "lucide-react";
 import type { Profile } from "@/lib/supabase/types";
 import { createClient } from "@/lib/supabase/client";
+import { maskPhoneBR, toE164BR } from "@/lib/phone";
 import { updateOwnProfile } from "./actions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { PokemonAvatar } from "@/components/PokemonAvatar";
@@ -14,10 +15,13 @@ import { Label } from "@/components/ui/label";
 export function PerfilClient({ profile }: { profile: Profile }) {
   const [species, setSpecies] = useState<string[]>([]);
   const [fullName, setFullName] = useState(profile.full_name ?? "");
+  const initialPhone = maskPhoneBR((profile.phone ?? "").replace(/^55/, ""));
+  const [phone, setPhone] = useState(initialPhone);
   const [favoritePokemon, setFavoritePokemon] = useState(profile.favorite_pokemon ?? "");
   const [sprite, setSprite] = useState(profile.favorite_pokemon_sprite);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("https://pokeapi.co/api/v2/pokemon-species?limit=1025")
@@ -32,7 +36,39 @@ export function PerfilClient({ profile }: { profile: Profile }) {
     e.preventDefault();
     setSaving(true);
     setSaved(false);
-    const res = await updateOwnProfile({ full_name: fullName, favorite_pokemon: favoritePokemon });
+    setPhoneError(null);
+
+    const phoneDigits = phone.replace(/\D/g, "");
+    const originalDigits = initialPhone.replace(/\D/g, "");
+    const phoneChanged = phoneDigits !== originalDigits;
+
+    if (phoneChanged) {
+      if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+        setPhoneError("Telefone inválido. Use DDD + número.");
+        setSaving(false);
+        return;
+      }
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ phone: toE164BR(phone) });
+      if (error) {
+        setPhoneError(
+          error.message.toLowerCase().includes("reauth")
+            ? "Por segurança, saia e entre de novo antes de trocar o telefone."
+            : error.message.toLowerCase().includes("registered") ||
+                error.message.toLowerCase().includes("exists")
+              ? "Esse número já está em uso por outra conta."
+              : "Não deu pra atualizar o telefone. Confira o número."
+        );
+        setSaving(false);
+        return;
+      }
+    }
+
+    const res = await updateOwnProfile({
+      full_name: fullName,
+      favorite_pokemon: favoritePokemon,
+      phone: phoneChanged ? phoneDigits : undefined,
+    });
     setSprite(res.sprite);
     setSaving(false);
     setSaved(true);
@@ -40,7 +76,7 @@ export function PerfilClient({ profile }: { profile: Profile }) {
 
   return (
     <div>
-      <AdminPageHeader title="MEU PERFIL" subtitle={profile.phone ?? undefined} />
+      <AdminPageHeader title="MEU PERFIL" subtitle="Seus dados de acesso e o avatar do sistema." />
 
       <form onSubmit={handleSubmit} className="mt-6 max-w-md space-y-4">
         <div className="flex items-center gap-4">
@@ -60,6 +96,19 @@ export function PerfilClient({ profile }: { profile: Profile }) {
         <div className="space-y-1.5">
           <Label>Nome completo</Label>
           <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="flex items-center gap-1.5">
+            <Phone className="h-3.5 w-3.5" /> Telefone (usado pra entrar)
+          </Label>
+          <Input
+            inputMode="numeric"
+            placeholder="(85) 99999-9999"
+            value={phone}
+            onChange={(e) => setPhone(maskPhoneBR(e.target.value))}
+          />
+          {phoneError && <p className="text-sm text-destructive">{phoneError}</p>}
         </div>
 
         <div className="space-y-1.5">

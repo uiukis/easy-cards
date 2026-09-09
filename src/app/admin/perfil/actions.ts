@@ -29,6 +29,7 @@ async function resolvePokemonSprite(name: string): Promise<string | null> {
 export async function updateOwnProfile(input: {
   full_name: string;
   favorite_pokemon: string;
+  phone?: string;
 }) {
   const supabase = await createClient();
   const {
@@ -37,6 +38,9 @@ export async function updateOwnProfile(input: {
   if (!user) throw new Error("Não autenticado.");
 
   const fav = input.favorite_pokemon.trim();
+  // Normalise to the "55DDDNUMBER" shape the rest of the app stores.
+  let phoneDigits = (input.phone ?? "").replace(/\D/g, "");
+  if (phoneDigits && !phoneDigits.startsWith("55")) phoneDigits = `55${phoneDigits}`;
 
   // Only re-hit PokéAPI when the favourite actually changed.
   const { data: current } = await supabase
@@ -53,14 +57,15 @@ export async function updateOwnProfile(input: {
     sprite = null;
   }
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({
-      full_name: input.full_name,
-      favorite_pokemon: fav || null,
-      favorite_pokemon_sprite: fav ? sprite : null,
-    })
-    .eq("id", user.id);
+  const patch: Record<string, unknown> = {
+    full_name: input.full_name,
+    favorite_pokemon: fav || null,
+    favorite_pokemon_sprite: fav ? sprite : null,
+  };
+  // Keep profiles.phone in step with auth.users.phone (updated client-side).
+  if (phoneDigits.length >= 10) patch.phone = phoneDigits;
+
+  const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
 
   if (error) throw new Error(error.message);
   revalidatePath("/admin/perfil");
