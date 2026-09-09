@@ -1,9 +1,21 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.29.0**.
+Datas no fuso de Brasília. Versão atual: **1.34.0**.
 
 ---
+
+## 1.34.0 — Prioridades P1 do roadmap · 09/09/2026
+
+- **App instalável (PWA)** — dá pra adicionar o Easy Cards na tela inicial do celular; tem até página de "sem conexão".
+- **Galeria pública `/cartas`** (link na navbar) — explorador da base do TCG: busca, filtro de tipo/raridade/set, arte em alta, ilustrador. As raras brilham.
+- **`/leiloes`** — página pública com o próximo leilão e o histórico ("arrematada por…").
+- **Carta da semana + números da comunidade** na home (fichários montados, cartas organizadas, etc).
+- **Fichário do set inteiro**: ao criar "coleção completa" a capa mostra `142/191 · 74% completo`.
+- **Consignação** no financeiro: carta de terceiro com dono + % de comissão, e um "A REPASSAR" no painel.
+- **Feed de atividade** pra equipe (`/admin/atividade` + sininho): cadastro novo, compra contestada.
+- **Fechamento mensal**: PDF do financeiro filtrado por mês.
+- Primeiro fichário com onboarding melhor.
 
 ## 1.29.0 — Prioridades P0 do roadmap · 09/09/2026
 
