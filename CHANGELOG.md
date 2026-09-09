@@ -1,9 +1,18 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.28.0**.
+Datas no fuso de Brasília. Versão atual: **1.29.0**.
 
 ---
+
+## 1.29.0 — Prioridades P0 do roadmap · 09/09/2026
+
+- **Menu no celular** na página inicial — o site não tinha navegação nenhuma no mobile (só grupo + login). Agora tem gaveta com tudo.
+- **Bloco "ferramentas da comunidade"** na home — fichário, galeria e lista de desejo ganharam destaque logo no começo, com uma frase e um botão de cada.
+- **Leilão da semana** na home: card editável em *Painel → Leilões* (título, data, chamada, imagem, resultado) com um toggle "na home". O lance continua no grupo.
+- **Cadastro de carta em lote** em *Cartas* — busca, seleciona várias e cadastra todas de uma vez.
+- **Avisos**: quando a equipe cadastra uma carta que bate com a lista de desejo de alguém, essa pessoa recebe um aviso no site (sino com contador + página `/avisos`). Antes era a equipe mandando no zap na mão.
+- Nova permissão *"Gerenciar leilões"* (liberada pra equipe e admin).
 
 ## 1.28.0 — Galeria de cartas · 09/09/2026
 
