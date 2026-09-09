@@ -17,5 +17,12 @@ export default async function PerfilPage() {
     .single();
   if (!profile) redirect("/admin");
 
-  return <PerfilClient profile={profile} />;
+  return (
+    <PerfilClient
+      profile={profile}
+      email={user.email ?? null}
+      emailConfirmed={!!user.email_confirmed_at}
+      pendingEmail={(user as { new_email?: string }).new_email ?? null}
+    />
+  );
 }

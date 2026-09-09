@@ -1,19 +1,40 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Sparkles, Eye, EyeOff, KeyRound, Phone, BadgeCheck } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Phone,
+  BadgeCheck,
+  AtSign,
+  Mail,
+  Check,
+} from "lucide-react";
 import type { Profile } from "@/lib/supabase/types";
 import { createClient } from "@/lib/supabase/client";
 import { maskPhoneBR } from "@/lib/phone";
 import { SITE } from "@/lib/site";
-import { updateOwnProfile } from "./actions";
+import { updateOwnProfile, setUsername } from "./actions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { PokemonAvatar } from "@/components/PokemonAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function PerfilClient({ profile }: { profile: Profile }) {
+export function PerfilClient({
+  profile,
+  email,
+  emailConfirmed,
+  pendingEmail,
+}: {
+  profile: Profile;
+  email: string | null;
+  emailConfirmed: boolean;
+  pendingEmail: string | null;
+}) {
   const [species, setSpecies] = useState<string[]>([]);
   const [fullName, setFullName] = useState(profile.full_name ?? "");
   const [favoritePokemon, setFavoritePokemon] = useState(profile.favorite_pokemon ?? "");
@@ -128,8 +149,151 @@ export function PerfilClient({ profile }: { profile: Profile }) {
         {saved && <p className="text-sm text-teal">Salvo!</p>}
       </form>
 
+      <UsernameSection initial={profile.username} />
+      <EmailSection email={email} confirmed={emailConfirmed} pending={pendingEmail} />
       <PasswordSection />
     </div>
+  );
+}
+
+function UsernameSection({ initial }: { initial: string | null }) {
+  const [value, setValue] = useState(initial ?? "");
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(initial);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const clean = value.trim().toLowerCase();
+  const valid = /^[a-z0-9_]{3,20}$/.test(clean);
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    const res = await setUsername(clean);
+    setBusy(false);
+    if (res.ok) {
+      setSaved(res.username);
+      setValue(res.username);
+      setMsg({ ok: true, text: "Nome de usuário salvo." });
+    } else {
+      setMsg({ ok: false, text: res.error });
+    }
+  }
+
+  return (
+    <div className="mt-10 max-w-md space-y-3">
+      <div className="flex items-center gap-2">
+        <AtSign className="h-4 w-4 text-primary" />
+        <h2 className="font-display text-lg text-ink">NOME DE USUÁRIO</h2>
+      </div>
+      <p className="text-xs text-ink-muted">
+        Vira o link do seu perfil público:{" "}
+        <span className="font-mono text-ink">
+          {typeof window !== "undefined" ? window.location.host : "easycards"}/u/{saved || "seu-nome"}
+        </span>
+      </p>
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted">@</span>
+          <Input
+            value={value}
+            onChange={(e) => setValue(e.target.value.replace(/[^A-Za-z0-9_]/g, "").toLowerCase())}
+            placeholder="seu_nome"
+            maxLength={20}
+            className="pl-7"
+          />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={save}
+          disabled={busy || !valid || clean === (saved ?? "")}
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          Salvar
+        </Button>
+      </div>
+      {msg && (
+        <p className={`text-sm ${msg.ok ? "text-teal" : "text-destructive"}`}>{msg.text}</p>
+      )}
+    </div>
+  );
+}
+
+function EmailSection({
+  email,
+  confirmed,
+  pending,
+}: {
+  email: string | null;
+  confirmed: boolean;
+  pending: string | null;
+}) {
+  const [value, setValue] = useState(email ?? "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg(null);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+      setMsg({ ok: false, text: "Email inválido." });
+      return;
+    }
+    setBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ email: value.trim() });
+    setBusy(false);
+    if (error) {
+      setMsg({
+        ok: false,
+        text: /registered|exists/i.test(error.message)
+          ? "Esse email já está em uso por outra conta."
+          : "Não deu pra salvar. Tenta de novo.",
+      });
+      return;
+    }
+    setMsg({ ok: true, text: "Enviamos um link de confirmação pro seu email. Abre lá pra confirmar." });
+  }
+
+  return (
+    <form onSubmit={save} className="mt-10 max-w-md space-y-3">
+      <div className="flex items-center gap-2">
+        <Mail className="h-4 w-4 text-primary" />
+        <h2 className="font-display text-lg text-ink">EMAIL (OPCIONAL)</h2>
+      </div>
+      <p className="text-xs text-ink-muted">
+        Serve pra recuperar a conta, entrar sem o telefone e receber aviso quando uma carta da sua
+        lista de desejo aparecer.
+      </p>
+
+      {email && confirmed && !pending && (
+        <p className="flex items-center gap-1.5 text-xs font-semibold text-teal">
+          <BadgeCheck className="h-3.5 w-3.5" /> {email} — confirmado
+        </p>
+      )}
+      {pending && (
+        <p className="text-xs font-semibold text-orange-deep">
+          Falta confirmar <span className="text-ink">{pending}</span> — abre o link que mandamos por
+          email.
+        </p>
+      )}
+
+      <div className="flex items-center gap-2">
+        <Input
+          type="email"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="voce@email.com"
+        />
+        <Button type="submit" variant="outline" disabled={busy || !value.trim()}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+          {email ? "Trocar" : "Adicionar"}
+        </Button>
+      </div>
+      {msg && (
+        <p className={`text-sm ${msg.ok ? "text-teal" : "text-destructive"}`}>{msg.text}</p>
+      )}
+    </form>
   );
 }
 

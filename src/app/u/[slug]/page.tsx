@@ -21,7 +21,9 @@ type PublicItem = {
 
 type PublicWishlist = {
   name: string | null;
+  username: string | null;
   verified: boolean;
+  email_confirmed: boolean;
   avatar: string | null;
   pokemon: string | null;
   items: PublicItem[];
@@ -95,10 +97,15 @@ export default async function PublicWishlistPage({
             </h1>
           </div>
         </div>
+        {data.username && (
+          <p className="mt-1 font-mono text-xs text-ink-muted">@{data.username}</p>
+        )}
         {!data.verified && (
           <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-surface-alt px-2.5 py-1.5 text-xs text-ink-muted">
             <ShieldQuestion className="h-3.5 w-3.5 shrink-0" />
-            Conta ainda não verificada pela Easy Cards — confirme quem é antes de fechar negócio.
+            {data.email_confirmed
+              ? "Contato confirmado, mas a Easy Cards ainda não verificou a identidade — confirme quem é antes de fechar negócio."
+              : "Conta ainda não verificada pela Easy Cards — confirme quem é antes de fechar negócio."}
           </p>
         )}
         <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-muted">

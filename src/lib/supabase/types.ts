@@ -9,6 +9,7 @@ export type Profile = {
   favorite_pokemon_sprite: string | null;
   wishlist_public: boolean;
   share_slug: string | null;
+  username: string | null;
   verified_at: string | null;
   verified_by: string | null;
   created_at: string;

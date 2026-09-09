@@ -68,3 +68,34 @@ export async function updateOwnProfile(input: {
   revalidatePath("/admin/usuarios");
   return { sprite: fav ? sprite : null };
 }
+
+/** Claim or change the public handle used at /u/<username>. */
+export async function setUsername(raw: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const username = raw.trim().toLowerCase();
+  if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+    return { ok: false as const, error: "Use 3 a 20 letras, números ou _ (sem espaço)." };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ username })
+    .eq("id", user.id);
+
+  if (error) {
+    return {
+      ok: false as const,
+      error: /duplicate|unique/i.test(error.message)
+        ? "Esse nome de usuário já está em uso."
+        : "Não deu pra salvar.",
+    };
+  }
+  revalidatePath("/admin/perfil");
+  revalidatePath("/lista-de-desejos");
+  return { ok: true as const, username };
+}

@@ -20,7 +20,7 @@ export default async function ListaDeDesejosPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("profiles")
-      .select("wishlist_public, share_slug")
+      .select("wishlist_public, share_slug, username")
       .eq("id", user.id)
       .single(),
     supabase
@@ -38,7 +38,7 @@ export default async function ListaDeDesejosPage() {
         <WishlistClient
           initialItems={(items ?? []) as WishlistItem[]}
           isPublic={profile?.wishlist_public ?? false}
-          shareSlug={profile?.share_slug ?? null}
+          shareSlug={profile?.username ?? profile?.share_slug ?? null}
           wantedInBinders={wantedInBinders ?? 0}
         />
       </div>
