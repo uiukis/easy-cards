@@ -1,9 +1,16 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { CustomerNav } from "@/components/CustomerNav";
 import { BinderListClient, type BinderWithPreview } from "./BinderListClient";
 import { GuestFichario } from "./GuestFichario";
+
+export const metadata: Metadata = {
+  title: "Fichário — monte seu binder de cartas Pokémon | Easy Cards",
+  description:
+    "Monte seu fichário de cartas Pokémon online: grade que você escolhe, capa personalizada, tenho/quero por carta, coleção de set inteiro e link público. Dá pra testar sem conta.",
+};
 
 export default async function FicharioListPage() {
   const supabase = await createClient();

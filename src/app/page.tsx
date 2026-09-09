@@ -49,8 +49,24 @@ export default async function Home() {
     auctions: 0,
   }) as { binders: number; cardsInBinders: number; wishlistCards: number; auctions: number };
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Easy Cards",
+    description:
+      "Comunidade de colecionadores de cards Pokémon: compra, venda, troca, eventos, oficinas e leilões.",
+    url: "https://easycardstcg.vercel.app",
+    logo: "https://easycardstcg.vercel.app/icon-512.png",
+    sameAs: ["https://www.instagram.com/easycards.tcg/"],
+    areaServed: "BR",
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <EventBanner />
       <Navbar />
       <main className="flex-1">
