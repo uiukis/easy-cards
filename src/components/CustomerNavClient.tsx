@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -23,6 +24,18 @@ const BASE_LINKS: NavLink[] = [
 export function CustomerNavClient({ isStaff = false }: { isStaff?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    queueMicrotask(() => setMounted(true));
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   const links: NavLink[] = isStaff
     ? [...BASE_LINKS, { href: "/admin", label: "Painel", icon: LayoutDashboard }]
@@ -78,63 +91,67 @@ export function CustomerNavClient({ isStaff = false }: { isStaff?: boolean }) {
         </button>
       </div>
 
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)}
-              className="fixed inset-0 z-50 bg-ink/40 backdrop-blur-sm md:hidden"
-            />
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="bg-halftone fixed inset-y-0 right-0 z-50 flex w-64 max-w-[80vw] flex-col border-l-2 border-ink/10 bg-surface px-4 py-5 shadow-2xl md:hidden"
-            >
-              <div className="flex items-center justify-between px-1">
-                <span className="font-display text-sm tracking-wide text-ink">MENU</span>
-                <button
+      {mounted &&
+        createPortal(
+          <AnimatePresence>
+            {open && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                   onClick={() => setOpen(false)}
-                  aria-label="Fechar menu"
-                  className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink/10 text-ink transition-transform active:scale-95"
+                  className="fixed inset-0 z-[60] bg-ink/40 backdrop-blur-sm md:hidden"
+                />
+                <motion.div
+                  initial={{ x: "100%" }}
+                  animate={{ x: 0 }}
+                  exit={{ x: "100%" }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="bg-halftone fixed inset-y-0 right-0 z-[61] flex w-64 max-w-[80vw] flex-col overflow-y-auto border-l-2 border-ink/10 bg-surface px-4 py-5 shadow-2xl md:hidden"
                 >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
+                  <div className="flex items-center justify-between px-1">
+                    <span className="font-display text-sm tracking-wide text-ink">MENU</span>
+                    <button
+                      onClick={() => setOpen(false)}
+                      aria-label="Fechar menu"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-ink/10 text-ink transition-transform active:scale-95"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
 
-              <nav className="mt-4 flex-1 space-y-1">
-                {[
-                  ...links,
-                  { href: "/tenho-pra-troca", label: "Tenho pra troca", icon: Repeat2 },
-                  { href: "/avisos", label: "Avisos", icon: Bell },
-                ].map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setOpen(false)}
-                    className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
-                      isActive(link.href)
-                        ? "bg-orange-deep text-white shadow-sm"
-                        : "text-ink-muted hover:bg-surface-alt hover:text-ink"
-                    }`}
-                  >
-                    <link.icon className="h-4 w-4" />
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
+                  <nav className="mt-4 flex-1 space-y-1">
+                    {[
+                      ...links,
+                      { href: "/tenho-pra-troca", label: "Tenho pra troca", icon: Repeat2 },
+                      { href: "/avisos", label: "Avisos", icon: Bell },
+                    ].map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setOpen(false)}
+                        className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                          isActive(link.href)
+                            ? "bg-orange-deep text-white shadow-sm"
+                            : "text-ink-muted hover:bg-surface-alt hover:text-ink"
+                        }`}
+                      >
+                        <link.icon className="h-4 w-4" />
+                        {link.label}
+                      </Link>
+                    ))}
+                  </nav>
 
-              <div className="border-t-2 border-ink/10 pt-4">
-                <LogoutButton className="w-full justify-start" />
-              </div>
-            </motion.div>
-          </>
+                  <div className="border-t-2 border-ink/10 pt-4">
+                    <LogoutButton className="w-full justify-start" />
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 }
