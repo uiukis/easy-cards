@@ -7,6 +7,7 @@ import { WhatsAppIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { CustomerNav } from "@/components/CustomerNav";
 import { Reveal } from "@/components/Reveal";
+import { AddToBinderButton } from "./AddToBinderButton";
 
 export default async function MinhasCartasPage() {
   const supabase = await createClient();
@@ -16,13 +17,18 @@ export default async function MinhasCartasPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/minhas-cartas");
 
-  const [{ data: profile }, { data: purchases }] = await Promise.all([
+  const [{ data: profile }, { data: purchases }, { data: binders }] = await Promise.all([
     supabase.from("profiles").select("full_name").eq("id", user.id).single(),
     supabase
       .from("card_finance")
-      .select("*, cards(name, set_name, card_number, image_url, condition)")
+      .select("*, cards(name, set_name, card_number, image_url, condition, tcg_api_id)")
       .eq("buyer_id", user.id)
       .order("sold_at", { ascending: false }),
+    supabase
+      .from("binders")
+      .select("id, name")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const firstName = profile?.full_name?.split(" ")[0] || "colecionador";
@@ -84,6 +90,7 @@ export default async function MinhasCartasPage() {
                 card_number: string | null;
                 image_url: string | null;
                 condition: string | null;
+                tcg_api_id: string | null;
               } | null;
               return (
                 <div
@@ -100,7 +107,7 @@ export default async function MinhasCartasPage() {
                   ) : (
                     <div className="h-24 w-16 shrink-0 rounded-md bg-surface-alt" />
                   )}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-ink">
                       {card?.name ?? "Carta"}
                       {card?.card_number && (
@@ -125,6 +132,18 @@ export default async function MinhasCartasPage() {
                         </Badge>
                       )}
                     </div>
+                    {card?.image_url && (
+                      <AddToBinderButton
+                        binders={binders ?? []}
+                        card={{
+                          tcg_api_id: card.tcg_api_id ?? "",
+                          name: card.name,
+                          set_name: card.set_name ?? "",
+                          card_number: card.card_number ?? "",
+                          image_url: card.image_url,
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
               );
