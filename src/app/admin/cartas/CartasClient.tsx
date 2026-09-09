@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
   Plus,
@@ -65,14 +66,26 @@ export function CartasClient({
   initialCards,
   canViewFinance,
   financeByCardId,
+  openFinanceCardId = null,
 }: {
   initialCards: Card[];
   canViewFinance: boolean;
   financeByCardId: Record<string, CardFinance>;
+  openFinanceCardId?: string | null;
 }) {
+  const router = useRouter();
   const [cards, setCards] = useState(initialCards);
   const [editing, setEditing] = useState<Card | "new" | null>(null);
   const [financeFor, setFinanceFor] = useState<Card | null>(null);
+
+  // Deep link from /admin/financeiro — open a card's finance modal straight away.
+  useEffect(() => {
+    if (!openFinanceCardId) return;
+    const card = initialCards.find((c) => c.id === openFinanceCardId);
+    if (card) queueMicrotask(() => setFinanceFor(card));
+    router.replace("/admin/cartas");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openFinanceCardId]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 

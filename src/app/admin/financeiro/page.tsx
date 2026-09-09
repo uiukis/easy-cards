@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { TrendingUp, Wallet, Clock, Truck, Users, ExternalLink } from "lucide-react";
+import { TrendingUp, Wallet, Clock, Truck, Users, FileText, Pencil } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEffectivePermissions } from "@/lib/get-permissions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { Card, CardContent } from "@/components/ui/card";
+import { MarkButton } from "./QuickActions";
 
 const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -126,13 +127,22 @@ export default async function FinanceiroPage() {
         title="FINANCEIRO"
         subtitle="Vendas, recebíveis e entregas."
         action={
-          <Link
-            href="/admin/cartas"
-            className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink/15 px-3 py-1.5 text-xs font-bold text-ink hover:bg-surface-alt"
-          >
-            Exportar CSV
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/admin/financeiro/pdf"
+              className="inline-flex items-center gap-1.5 rounded-full bg-orange-deep px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-orange-deep/90"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Relatório PDF
+            </Link>
+            <Link
+              href="/admin/cartas"
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-ink/15 px-3 py-1.5 text-xs font-bold text-ink hover:bg-surface-alt"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Editar catálogo
+            </Link>
+          </div>
         }
       />
 
@@ -163,16 +173,17 @@ export default async function FinanceiroPage() {
                 {receivable
                   .sort((a, b) => new Date(soldWhen(a) ?? 0).getTime() - new Date(soldWhen(b) ?? 0).getTime())
                   .map((r) => (
-                    <li key={r.card_id} className="flex items-center justify-between gap-3 text-sm">
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold text-ink">{cardName(r)}</p>
+                    <li key={r.card_id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-sm">
+                      <Link href={`/admin/cartas?finance=${r.card_id}`} className="group min-w-0 flex-1">
+                        <p className="truncate font-semibold text-ink group-hover:underline">{cardName(r)}</p>
                         <p className="text-xs text-ink-muted">
                           {r.buyer_name || "sem comprador"} {soldWhen(r) ? ` · vendida há ${daysSince(soldWhen(r)!)}` : ""}
                         </p>
-                      </div>
+                      </Link>
                       <span className="shrink-0 font-semibold text-destructive">
                         {brl(num(r.final_price))}
                       </span>
+                      <MarkButton kind="paid" cardId={r.card_id} />
                     </li>
                   ))}
               </ul>
@@ -193,16 +204,15 @@ export default async function FinanceiroPage() {
             ) : (
               <ul className="mt-4 space-y-2.5">
                 {domiPending.map((r) => (
-                  <li key={r.card_id} className="flex items-center justify-between gap-3 text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-ink">{cardName(r)}</p>
-                      <p className="text-xs text-ink-muted">{r.buyer_name || "sem comprador"}</p>
-                    </div>
-                    {r.dominaria_fee != null && (
-                      <span className="shrink-0 text-xs text-ink-muted">
-                        taxa {brl(num(r.dominaria_fee))}
-                      </span>
-                    )}
+                  <li key={r.card_id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-sm">
+                    <Link href={`/admin/cartas?finance=${r.card_id}`} className="group min-w-0 flex-1">
+                      <p className="truncate font-semibold text-ink group-hover:underline">{cardName(r)}</p>
+                      <p className="text-xs text-ink-muted">
+                        {r.buyer_name || "sem comprador"}
+                        {r.dominaria_fee != null ? ` · taxa ${brl(num(r.dominaria_fee))}` : ""}
+                      </p>
+                    </Link>
+                    <MarkButton kind="deposited" cardId={r.card_id} />
                   </li>
                 ))}
               </ul>
@@ -252,13 +262,13 @@ export default async function FinanceiroPage() {
               <ul className="mt-4 space-y-2.5">
                 {recentSales.map((r) => (
                   <li key={r.card_id} className="flex items-center justify-between gap-3 text-sm">
-                    <div className="min-w-0">
-                      <p className="truncate text-ink">{cardName(r)}</p>
+                    <Link href={`/admin/cartas?finance=${r.card_id}`} className="group min-w-0 flex-1">
+                      <p className="truncate text-ink group-hover:underline">{cardName(r)}</p>
                       <p className="text-xs text-ink-muted">
                         {soldWhen(r) ? new Date(soldWhen(r)!).toLocaleDateString("pt-BR") : "vendida"}
                         {r.paid_at ? " · pago" : " · a receber"}
                       </p>
-                    </div>
+                    </Link>
                     <span className="shrink-0 font-semibold text-primary">
                       {brl(num(r.final_price))}
                     </span>

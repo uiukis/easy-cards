@@ -140,7 +140,7 @@ export function AdminNav({
   return (
     <>
       {/* mobile top bar */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b-2 border-ink/10 bg-surface/95 px-4 py-3 backdrop-blur-md md:hidden">
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b-2 border-ink/10 bg-surface/95 px-4 py-3 backdrop-blur-md md:hidden print:hidden">
         <Link href="/admin" className="flex items-center gap-2">
           <Image
             src="/brand/icon-square.png"
@@ -203,7 +203,7 @@ export function AdminNav({
       </AnimatePresence>
 
       {/* desktop sidebar */}
-      <aside className="bg-halftone sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r-2 border-ink/10 bg-surface px-4 py-6 md:flex">
+      <aside className="bg-halftone sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r-2 border-ink/10 bg-surface px-4 py-6 md:flex print:hidden">
         <Link href="/admin" className="mb-6 flex items-center gap-2 px-2">
           <Image
             src="/brand/icon-square.png"

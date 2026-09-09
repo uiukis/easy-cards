@@ -4,8 +4,13 @@ import { getEffectivePermissions } from "@/lib/get-permissions";
 import type { CardFinance } from "@/lib/supabase/types";
 import { CartasClient } from "./CartasClient";
 
-export default async function CartasPage() {
+export default async function CartasPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ finance?: string }>;
+}) {
   const supabase = await createClient();
+  const { finance: financeParam } = await searchParams;
 
   const {
     data: { user },
@@ -38,6 +43,7 @@ export default async function CartasPage() {
       initialCards={cards ?? []}
       canViewFinance={permissions.view_finance}
       financeByCardId={financeByCardId}
+      openFinanceCardId={permissions.view_finance ? financeParam ?? null : null}
     />
   );
 }
