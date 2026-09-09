@@ -18,12 +18,21 @@ import {
   Store,
   Heart,
   ExternalLink,
+  Layers,
 } from "lucide-react";
 import type { Card, CardFinance } from "@/lib/supabase/types";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { maskBRL, brlFromNumber, brlToPlain } from "@/lib/money";
-import { createCard, updateCard, deleteCard, setShopEnabled, type CardInput } from "./actions";
+import {
+  createCard,
+  updateCard,
+  deleteCard,
+  setShopEnabled,
+  createManyCards,
+  type CardInput,
+} from "./actions";
 import { CardSearch, type SearchResult } from "./CardSearch";
+import { AddCardsDialog } from "@/app/fichario/AddCardsDialog";
 import { FinanceModal } from "./FinanceModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +128,27 @@ export function CartasClient({
   const [shopOn, setShopOn] = useState(shopEnabled);
   const [shopBusy, startShop] = useTransition();
   const [wishFor, setWishFor] = useState<{ card: Card; matches: WishMatch[] } | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  async function handleBulk(picked: SearchResult[]) {
+    if (picked.length === 0) return;
+    setBulkBusy(true);
+    try {
+      await createManyCards(
+        picked.map((c) => ({
+          tcg_api_id: c.id,
+          name: c.name,
+          set_name: c.setName || "",
+          card_number: c.cardNumber || "",
+          image_url: c.imageUrl,
+        }))
+      );
+      window.location.reload();
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   // Deep link from /admin/financeiro — open a card's finance modal straight away.
   useEffect(() => {
@@ -212,10 +242,16 @@ export function CartasClient({
         title="CARTAS"
         subtitle="Catálogo pro leilão e vendas."
         action={
-          <Button onClick={() => setEditing("new")}>
-            <Plus className="h-4 w-4" />
-            Nova carta
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setBulkOpen(true)}>
+              <Layers className="h-4 w-4" />
+              Em lote
+            </Button>
+            <Button onClick={() => setEditing("new")}>
+              <Plus className="h-4 w-4" />
+              Nova carta
+            </Button>
+          </div>
         }
       />
 
@@ -483,6 +519,15 @@ export function CartasClient({
         destructive
         loading={deletingId !== null}
         onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
+      />
+
+      <AddCardsDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        onConfirm={handleBulk}
+        showPageToggle={false}
+        currentPage={1}
+        adding={bulkBusy}
       />
 
       <Dialog open={wishFor !== null} onOpenChange={(v) => !v && setWishFor(null)}>

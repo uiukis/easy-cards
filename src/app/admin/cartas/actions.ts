@@ -69,6 +69,39 @@ export async function updateCard(id: string, input: CardInput) {
   revalidatePath("/admin/cartas");
 }
 
+export type BulkCardInput = {
+  tcg_api_id: string;
+  name: string;
+  set_name: string;
+  card_number: string;
+  image_url: string;
+};
+
+export async function createManyCards(cards: BulkCardInput[]) {
+  if (cards.length === 0) return { added: 0 };
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const rows = cards.map((c) => ({
+    name: c.name,
+    set_name: c.set_name || null,
+    card_number: c.card_number || null,
+    image_url: c.image_url || null,
+    condition: "NM",
+    status: "available" as const,
+    tcg_api_id: c.tcg_api_id || null,
+    created_by: user.id,
+  }));
+
+  const { error } = await supabase.from("cards").insert(rows);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/cartas");
+  return { added: rows.length };
+}
+
 export async function deleteCard(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("cards").delete().eq("id", id);
