@@ -16,6 +16,7 @@ import {
 } from "./actions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { PressCard } from "@/components/PressSection";
+import { ImageUploadField } from "@/components/ImageUploadField";
 import { InstagramIcon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,11 +160,7 @@ function ApoiadoresTab({ initial }: { initial: Supporter[] }) {
                 value={instagram}
                 onChange={(e) => setInstagram(e.target.value)}
               />
-              <Input
-                placeholder="URL da foto (ex: foto de perfil do Instagram dele)"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-              />
+              <ImageUploadField value={imageUrl} onChange={setImageUrl} shape="circle" />
               <Button type="submit" disabled={saving}>
                 <Plus className="h-4 w-4" /> {editingId ? "Salvar alterações" : "Adicionar"}
               </Button>
@@ -407,11 +404,7 @@ function ImprensaTab({ initial }: { initial: PressMention[] }) {
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
               />
-              <Input
-                placeholder="Imagem de capa (URL)"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-              />
+              <ImageUploadField value={imageUrl} onChange={setImageUrl} shape="square" />
               <div className="grid grid-cols-2 gap-2">
                 <Input
                   placeholder="Veículo (ex: Tudo de Novo)"
