@@ -1,9 +1,20 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.22.0**.
+Datas no fuso de Brasília. Versão atual: **1.24.0**.
 
 ---
+
+## 1.24.0 — Brilho holográfico ✨ · 09/09/2026
+
+- Cartas marcadas como **Holo / Reverse Holo / 1ª Edição** ganham um **brilho de foil que segue o mouse** no fichário e na visão pública. Puro capricho visual.
+
+## 1.23.0 — Usuário e email · 09/09/2026
+
+- **Nome de usuário** (@handle): vira o link do seu perfil público — `easycards/u/seu-nome` em vez de um código aleatório. Define em *Meu perfil*.
+- **Email opcional** na conta: serve pra recuperar o acesso, **entrar sem o telefone** e (em breve) receber aviso quando uma carta da sua lista de desejo aparecer. Confirmação por link.
+- **Login aceita telefone OU email** no mesmo campo.
+- Perfil público com email confirmado mostra "contato confirmado" (um degrau abaixo do selo ✓ da equipe).
 
 ## 1.22.0 — Telefone só a equipe altera · 09/09/2026
 
