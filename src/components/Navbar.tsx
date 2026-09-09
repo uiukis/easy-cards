@@ -18,6 +18,7 @@ const LINKS = [
   { href: "/#comunidade", label: "Comunidade" },
   { href: "/imprensa", label: "Na mídia" },
   { href: "/novidades", label: "Novidades" },
+  { href: "/cartas", label: "Cartas" },
   { href: "/fichario", label: "Fichário", beta: true },
 ];
 
