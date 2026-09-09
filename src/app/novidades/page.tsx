@@ -51,7 +51,7 @@ export default function NovidadesPage() {
             <p className="mt-3 text-sm leading-relaxed text-ink">
               Cadastro rápido só com telefone. Portal com “Minhas cartas” (tudo que você comprou/arrematou
               com a gente), trocar senha, e o seu Pokémon favorito vira seu avatar no sistema. Errou o
-              número no cadastro? Dá pra corrigir sozinho.
+              número no cadastro? Fala com a gente no grupo que a equipe corrige.
             </p>
             <p className="mt-3 rounded-2xl bg-surface-alt p-3 text-sm leading-relaxed text-ink">
               <span className="font-bold text-orange-deep">Arrematou uma carta no leilão?</span> Se você

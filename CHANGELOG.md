@@ -1,9 +1,13 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.21.0**.
+Datas no fuso de Brasília. Versão atual: **1.22.0**.
 
 ---
+
+## 1.22.0 — Telefone só a equipe altera · 09/09/2026
+
+- Tirado o "corrigir o próprio telefone" de *Meu perfil* — o campo agora é só leitura, com um aviso pra falar com a equipe no grupo. Quem altera é admin/CTO em *Usuários* (evita que alguém troque pro número de outra pessoa).
 
 ## 1.21.0 — Conta verificada · 09/09/2026
 
@@ -37,8 +41,8 @@ Como o cadastro é só telefone + senha (sem SMS, que é pago), qualquer um pode
 
 ## 1.16.0 — Editar telefone · 09/09/2026
 
-- **Cada pessoa pode corrigir o próprio telefone** em *Meu perfil* (é o número que usa pra entrar).
-- **Admin pode corrigir o telefone de qualquer usuário** direto na tela de *Usuários* — útil pra quem é cliente e não acessa o painel.
+- **Admin pode corrigir o telefone de qualquer usuário** direto na tela de *Usuários*.
+- _(Na 1.22.0 a edição pelo próprio usuário foi removida — agora é só a equipe que altera.)_
 
 ## 1.15.0 — Lista de desejo · 09/09/2026
 

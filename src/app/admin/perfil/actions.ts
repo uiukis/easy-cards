@@ -29,7 +29,6 @@ async function resolvePokemonSprite(name: string): Promise<string | null> {
 export async function updateOwnProfile(input: {
   full_name: string;
   favorite_pokemon: string;
-  phone?: string;
 }) {
   const supabase = await createClient();
   const {
@@ -38,9 +37,6 @@ export async function updateOwnProfile(input: {
   if (!user) throw new Error("Não autenticado.");
 
   const fav = input.favorite_pokemon.trim();
-  // Normalise to the "55DDDNUMBER" shape the rest of the app stores.
-  let phoneDigits = (input.phone ?? "").replace(/\D/g, "");
-  if (phoneDigits && !phoneDigits.startsWith("55")) phoneDigits = `55${phoneDigits}`;
 
   // Only re-hit PokéAPI when the favourite actually changed.
   const { data: current } = await supabase
@@ -63,8 +59,6 @@ export async function updateOwnProfile(input: {
   };
   // A verified name is locked — only the team changes it (keeps the ✓ honest).
   if (!current?.verified_at) patch.full_name = input.full_name;
-  // Keep profiles.phone in step with auth.users.phone (updated client-side).
-  if (phoneDigits.length >= 10) patch.phone = phoneDigits;
 
   const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
 
