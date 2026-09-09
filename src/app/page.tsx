@@ -4,6 +4,7 @@ import { Hero } from "@/components/Hero";
 import { About } from "@/components/About";
 import { EventsSection } from "@/components/EventsSection";
 import { AuctionsSection } from "@/components/AuctionsSection";
+import { ToolsSection } from "@/components/ToolsSection";
 import { GradedShowcase } from "@/components/GradedShowcase";
 import { SupportSection } from "@/components/SupportSection";
 import { SupportersStrip } from "@/components/SupportersStrip";
@@ -41,6 +42,7 @@ export default async function Home() {
       <main className="flex-1">
         <Hero />
         <About />
+        <ToolsSection />
         <EventsSection />
         <PressSection mentions={pressMentions ?? []} />
         <AuctionsSection />
