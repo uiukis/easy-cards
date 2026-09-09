@@ -1,9 +1,13 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.18.0**.
+Datas no fuso de Brasília. Versão atual: **1.19.0**.
 
 ---
+
+## 1.19.0 — Da compra pro fichário · 09/09/2026
+
+- Quando a gente registra uma carta vendida e **vincula ao usuário cadastrado**, ela aparece em *Minhas cartas* — e agora tem um botão **"adicionar ao fichário"** ali mesmo, um toque e a carta cai no binder.
 
 ## 1.18.0 — Histórico da carta · 09/09/2026
 
