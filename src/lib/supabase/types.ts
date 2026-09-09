@@ -15,6 +15,18 @@ export type Profile = {
   created_at: string;
 };
 
+export type Auction = {
+  id: string;
+  title: string;
+  happens_at: string | null;
+  note: string | null;
+  image_url: string | null;
+  featured: boolean;
+  result: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
 export type WishlistItem = {
   id: string;
   user_id: string;

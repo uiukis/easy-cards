@@ -1,9 +1,70 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Gavel } from "lucide-react";
+import { Gavel, CalendarClock } from "lucide-react";
+import type { Auction } from "@/lib/supabase/types";
 import { SITE } from "@/lib/site";
 import { WhatsAppIcon } from "./icons";
+
+function FeaturedAuction({ a }: { a: Auction }) {
+  const when = a.happens_at
+    ? new Date(a.happens_at).toLocaleString("pt-BR", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.5 }}
+      className="mx-auto mb-6 max-w-6xl px-5 sm:px-8"
+    >
+      <div className="flex flex-col gap-5 overflow-hidden rounded-[2rem] border-2 border-orange-deep bg-surface p-5 sm:flex-row sm:items-center sm:p-6">
+        {a.image_url && (
+          // eslint-disable-next-line @next/next/no-img-element -- admin-provided image
+          <img
+            src={a.image_url}
+            alt=""
+            className="h-40 w-full shrink-0 rounded-2xl object-cover sm:h-32 sm:w-48"
+          />
+        )}
+        <div className="min-w-0 flex-1">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-deep/10 px-3 py-1 font-comic text-xs tracking-wide text-orange-deep">
+            <Gavel className="h-3.5 w-3.5" />
+            {a.result ? "Último leilão" : "Próximo leilão"}
+          </span>
+          <h3 className="mt-2 font-display text-2xl leading-tight text-ink text-comic-shadow-sm">
+            {a.title}
+          </h3>
+          {when && !a.result && (
+            <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-ink-muted">
+              <CalendarClock className="h-4 w-4 text-orange-deep" />
+              {when}
+            </p>
+          )}
+          {a.note && <p className="mt-1.5 text-sm text-ink-muted">{a.note}</p>}
+          {a.result && <p className="mt-1.5 text-sm font-semibold text-teal">{a.result}</p>}
+        </div>
+        {!a.result && (
+          <a
+            href={SITE.whatsappGroup}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex shrink-0 items-center justify-center gap-2 rounded-full bg-teal px-5 py-3 text-sm font-bold text-white shadow-lg shadow-teal/20 transition-transform hover:scale-105 active:scale-95"
+          >
+            <WhatsAppIcon className="h-4 w-4" />
+            Dar lance no grupo
+          </a>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 const RULES = [
   {
@@ -20,9 +81,10 @@ const RULES = [
   },
 ];
 
-export function AuctionsSection() {
+export function AuctionsSection({ featured }: { featured?: Auction | null }) {
   return (
     <section id="leiloes" className="relative py-20 sm:py-28">
+      {featured && <FeaturedAuction a={featured} />}
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <div className="overflow-hidden rounded-[2rem] border-2 border-ink/10 bg-blue-dark px-6 py-14 text-cream sm:px-14">
           <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">

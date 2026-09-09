@@ -5,7 +5,8 @@ export type PermissionKey =
   | "manage_cards"
   | "manage_quadro"
   | "manage_users"
-  | "view_wishlists";
+  | "view_wishlists"
+  | "manage_auctions";
 
 export const PERMISSION_LABEL: Record<PermissionKey, string> = {
   view_finance: "Ver valores e financeiro",
@@ -13,6 +14,7 @@ export const PERMISSION_LABEL: Record<PermissionKey, string> = {
   manage_quadro: "Gerenciar quadro (apoiadores, imprensa)",
   manage_users: "Gerenciar usuários e permissões",
   view_wishlists: "Ver listas de desejo dos usuários",
+  manage_auctions: "Gerenciar leilões",
 };
 
 export type Permissions = Record<PermissionKey, boolean>;
@@ -23,6 +25,7 @@ const ALL_TRUE: Permissions = {
   manage_quadro: true,
   manage_users: true,
   view_wishlists: true,
+  manage_auctions: true,
 };
 
 const ALL_FALSE: Permissions = {
@@ -31,6 +34,7 @@ const ALL_FALSE: Permissions = {
   manage_quadro: false,
   manage_users: false,
   view_wishlists: false,
+  manage_auctions: false,
 };
 
 // The CTO is always fully allowed and is the only one who can edit this
