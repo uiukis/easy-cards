@@ -117,11 +117,13 @@ export function BinderSocial({
           }`}
         >
           <Heart className={`h-4 w-4 ${liked ? "fill-primary" : ""}`} />
-          {likeCount > 0 ? likeCount : ""} {likeCount === 1 ? "curtida" : "curtidas"}
+          {likeCount === 0
+            ? "Curtir"
+            : `${likeCount} ${likeCount === 1 ? "curtida" : "curtidas"}`}
         </button>
         <span className="flex items-center gap-1.5 text-sm text-ink-muted">
           <MessageCircle className="h-4 w-4" />
-          {comments.length}
+          {comments.length} {comments.length === 1 ? "comentário" : "comentários"}
         </span>
       </div>
 
