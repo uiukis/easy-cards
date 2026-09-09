@@ -4,6 +4,7 @@ import { TrendingUp, Wallet, Clock, Truck, Users, FileText, Pencil, ShieldAlert 
 import { createClient } from "@/lib/supabase/server";
 import { getEffectivePermissions } from "@/lib/get-permissions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
+import { MonthClose } from "./MonthClose";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkButton } from "./QuickActions";
 
@@ -158,6 +159,8 @@ export default async function FinanceiroPage() {
           </div>
         }
       />
+
+      <MonthClose />
 
       {disputed.length > 0 && (
         <div className="mt-6 rounded-2xl border-2 border-destructive/40 bg-destructive/10 p-4">

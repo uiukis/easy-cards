@@ -28,7 +28,12 @@ const card = (r: Row) => (Array.isArray(r.cards) ? r.cards[0] : r.cards);
 const isSold = (r: Row) => !!r.sold_at || card(r)?.status === "sold";
 const num = (n: number | null | undefined) => Number(n) || 0;
 
-export default async function FinanceiroPdfPage() {
+export default async function FinanceiroPdfPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -50,7 +55,19 @@ export default async function FinanceiroPdfPage() {
     .select(
       "card_id, final_price, delivery_method, dominaria_fee, dominaria_deposited_at, buyer_name, sold_at, paid_at, notes, cards(name, set_name, card_number, condition, status)"
     );
-  const rows = (data ?? []) as Row[];
+  const allRows = (data ?? []) as Row[];
+
+  // /admin/financeiro/pdf?month=YYYY-MM => fechamento daquele mês
+  const monthMatch = month && /^\d{4}-\d{2}$/.test(month) ? month : null;
+  const monthLabel = monthMatch
+    ? new Date(`${monthMatch}-01T12:00:00`).toLocaleDateString("pt-BR", {
+        month: "long",
+        year: "numeric",
+      })
+    : null;
+  const rows = monthMatch
+    ? allRows.filter((r) => r.sold_at && r.sold_at.slice(0, 7) === monthMatch)
+    : allRows;
 
   const sold = rows.filter(isSold);
   const startOfMonth = new Date();
@@ -58,9 +75,11 @@ export default async function FinanceiroPdfPage() {
   startOfMonth.setHours(0, 0, 0, 0);
 
   const totalAll = sold.reduce((s, r) => s + num(r.final_price), 0);
-  const totalMonth = sold
-    .filter((r) => r.sold_at && new Date(r.sold_at) >= startOfMonth)
-    .reduce((s, r) => s + num(r.final_price), 0);
+  const totalMonth = monthMatch
+    ? totalAll
+    : sold
+        .filter((r) => r.sold_at && new Date(r.sold_at) >= startOfMonth)
+        .reduce((s, r) => s + num(r.final_price), 0);
   const receivable = sold.filter((r) => !r.paid_at);
   const receivableTotal = receivable.reduce((s, r) => s + num(r.final_price), 0);
   const domiFees = rows
@@ -84,8 +103,8 @@ export default async function FinanceiroPdfPage() {
   const now = new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" });
 
   const kpis = [
-    { label: "Vendido total", value: brl(totalAll) },
-    { label: "Vendido esse mês", value: brl(totalMonth) },
+    { label: monthMatch ? "Vendido no mês" : "Vendido total", value: brl(monthMatch ? totalAll : totalAll) },
+    { label: monthMatch ? "Vendas no mês" : "Vendido esse mês", value: monthMatch ? String(sold.length) : brl(totalMonth) },
     { label: "A receber", value: brl(receivableTotal), sub: `${receivable.length} carta(s)`, warn: true },
     { label: "Taxas Dominaria", value: brl(domiFees), sub: `${domiPending} a depositar` },
   ];
@@ -132,7 +151,7 @@ export default async function FinanceiroPdfPage() {
           className="mt-1 text-3xl font-extrabold uppercase tracking-tight text-[#1c1710]"
           style={{ fontFamily: "var(--font-luckiest), system-ui, sans-serif" }}
         >
-          Relatório Financeiro
+          {monthLabel ? `Fechamento — ${monthLabel}` : "Relatório Financeiro"}
         </h1>
         <p className="mt-1 text-xs text-[#786d59]">
           Gerado em {now} · por {profile.full_name ?? "equipe"}
