@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 const LINKS = [
   { href: "/#sobre", label: "Sobre" },
   { href: "/evento", label: "Evento" },
-  { href: "/#leiloes", label: "Leilões" },
+  { href: "/leiloes", label: "Leilões" },
   { href: "/#comunidade", label: "Comunidade" },
   { href: "/imprensa", label: "Na mídia" },
   { href: "/novidades", label: "Novidades" },
