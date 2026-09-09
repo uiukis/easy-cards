@@ -17,6 +17,7 @@ const LINKS = [
   { href: "/#leiloes", label: "Leilões" },
   { href: "/#comunidade", label: "Comunidade" },
   { href: "/imprensa", label: "Na mídia" },
+  { href: "/novidades", label: "Novidades" },
   { href: "/fichario", label: "Fichário", beta: true },
 ];
 
