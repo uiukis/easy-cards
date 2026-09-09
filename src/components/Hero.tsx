@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { motion, useScroll, useTransform } from "motion/react";
+import { motion, useScroll, useSpring, useTransform, useReducedMotion } from "motion/react";
 import { WalletCards, GraduationCap, Gavel } from "lucide-react";
 import { SITE } from "@/lib/site";
 import { FloatingCard } from "./FloatingCard";
@@ -44,17 +44,26 @@ export function Hero() {
   const [bgCards, setBgCards] = useState<string[]>([]);
   const ref = useRef<HTMLElement>(null);
 
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"],
-  });
-  // parallax: each layer drifts at its own rate as the hero scrolls away
-  const sunburstY = useTransform(scrollYProgress, [0, 1], [0, 160]);
-  const sunburstScale = useTransform(scrollYProgress, [0, 1], [1, 1.25]);
-  const bgCardsY = useTransform(scrollYProgress, [0, 1], [0, -110]);
-  const floatY = useTransform(scrollYProgress, [0, 1], [0, 90]);
-  const contentY = useTransform(scrollYProgress, [0, 1], [0, 40]);
-  const contentOpacity = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
+  // Parallax runs only on a real desktop pointer — it's the mobile scroll
+  // that stutters, and phones scroll smoothly on their own anyway.
+  const reduce = useReducedMotion();
+  const [parallax, setParallax] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px) and (pointer: fine)");
+    const sync = () => setParallax(mq.matches && !reduce);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, [reduce]);
+
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const p = useSpring(scrollYProgress, { stiffness: 90, damping: 26, mass: 0.35 });
+  // only `translateY` — GPU-composited, no repaint
+  const sunburstY = useTransform(p, [0, 1], [0, 90]);
+  const bgCardsY = useTransform(p, [0, 1], [0, -70]);
+  const floatY = useTransform(p, [0, 1], [0, 55]);
+  const par = (v: typeof sunburstY) =>
+    parallax ? { y: v, willChange: "transform" as const } : undefined;
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -75,7 +84,7 @@ export function Hero() {
           initial={{ opacity: 0, scale: 0.4 }}
           animate={{ opacity: 0.8, scale: 1 }}
           transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-          style={{ y: sunburstY, scale: sunburstScale }}
+          style={par(sunburstY)}
           className="h-full w-full"
         >
           <Sunburst />
@@ -87,7 +96,7 @@ export function Hero() {
           The group itself is faded as one flattened layer (opacity here
           creates a stacking context), so the cards stay fully opaque
           against each other and occlude properly instead of blending. */}
-      <motion.div style={{ y: bgCardsY }} className="pointer-events-none absolute inset-0 opacity-40">
+      <motion.div style={par(bgCardsY)} className="pointer-events-none absolute inset-0 opacity-40">
         {BG_CARD_SLOTS.map((slot, i) =>
           bgCards[i] ? (
             <motion.img
@@ -107,7 +116,7 @@ export function Hero() {
 
       {/* floating decorative cards, hidden on small screens to keep things tidy */}
       <motion.div
-        style={{ y: floatY }}
+        style={par(floatY)}
         className="pointer-events-none absolute inset-0 z-20 hidden lg:block"
       >
         {CARD_SLOTS.map((slot, i) => (
@@ -123,10 +132,7 @@ export function Hero() {
         ))}
       </motion.div>
 
-      <motion.div
-        style={{ y: contentY, opacity: contentOpacity }}
-        className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-5 text-center sm:px-8"
-      >
+      <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-5 text-center sm:px-8">
         <motion.div
           initial={{ opacity: 0, y: -10, rotate: -6 }}
           animate={{ opacity: 1, y: 0, rotate: -4 }}
@@ -206,7 +212,7 @@ export function Hero() {
             Ver no Instagram
           </a>
         </motion.div>
-      </motion.div>
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}

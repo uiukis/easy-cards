@@ -228,21 +228,6 @@ body {
   scrollbar-width: none;
 }
 
-/* Lenis smooth scroll (mounted only on public pages via <SmoothScroll>) */
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-.lenis.lenis-stopped {
-  overflow: hidden;
-}
-
 /* Holo / foil glare that follows the pointer. Drop <HoloShine> inside a
    position:relative card; it sets --holo-x/y/a on the parent. */
 .holo-shine {
