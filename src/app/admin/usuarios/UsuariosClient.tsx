@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, AlertTriangle, Pencil, Check, X } from "lucide-react";
+import { Loader2, AlertTriangle, Pencil, Check, X, BadgeCheck, ShieldQuestion } from "lucide-react";
 import type { Profile, UserRole } from "@/lib/supabase/types";
 import { maskPhoneBR } from "@/lib/phone";
-import { updateUserRole, updateUserPhone } from "./actions";
+import { updateUserRole, updateUserPhone, setUserVerified } from "./actions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { PokemonAvatar } from "@/components/PokemonAvatar";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,19 @@ export function UsuariosClient({
     }
   }
 
+  const [verifyBusy, setVerifyBusy] = useState<string | null>(null);
+  async function toggleVerified(id: string, next: boolean) {
+    setVerifyBusy(id);
+    try {
+      await setUserVerified(id, next);
+      setRows((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, verified_at: next ? new Date().toISOString() : null } : p))
+      );
+    } finally {
+      setVerifyBusy(null);
+    }
+  }
+
   return (
     <div>
       <AdminPageHeader
@@ -82,16 +95,16 @@ export function UsuariosClient({
         }
       />
 
-      {canEditRoles && (
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-ink">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <p>
-            O cadastro não confirma o número por SMS (é assim que fica de graça). Antes de promover
-            alguém pra Admin ou Equipe, confirme com a pessoa por um canal que você já confia (o
-            WhatsApp de sempre, por exemplo) que foi ela mesma quem criou a conta com aquele número.
-          </p>
-        </div>
-      )}
+      <div className="mt-4 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-ink">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <p>
+          O cadastro não confirma o número por SMS (é assim que fica de graça), então qualquer um pode
+          se cadastrar com qualquer número. Quando você tiver certeza de que a conta é da pessoa mesmo
+          (falou no grupo, comprou pessoalmente…), marca ela como{" "}
+          <span className="font-semibold">verificada</span> — o site passa a mostrar o nome completo
+          dela e um selo. Sem verificação, o perfil público mostra só o primeiro nome.
+        </p>
+      </div>
 
       <ul className="mt-6 space-y-2.5">
         {rows.map((p) => (
@@ -101,10 +114,15 @@ export function UsuariosClient({
           >
             <PokemonAvatar sprite={p.favorite_pokemon_sprite} name={p.full_name} size={36} />
             <div className="min-w-0 flex-1 basis-32">
-              <p className="truncate text-sm font-semibold text-ink">
-                {p.full_name || "—"}
+              <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-ink">
+                <span className="truncate">{p.full_name || "—"}</span>
+                {p.verified_at ? (
+                  <BadgeCheck className="h-4 w-4 shrink-0 text-teal" aria-label="Verificado" />
+                ) : (
+                  <ShieldQuestion className="h-4 w-4 shrink-0 text-ink-muted/50" aria-label="Não verificado" />
+                )}
                 {p.id === currentUserId && (
-                  <span className="ml-2 text-xs font-normal text-ink-muted">(você)</span>
+                  <span className="text-xs font-normal text-ink-muted">(você)</span>
                 )}
               </p>
               {phoneEditId === p.id ? (
@@ -151,6 +169,23 @@ export function UsuariosClient({
               )}
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-2">
+              <button
+                onClick={() => toggleVerified(p.id, !p.verified_at)}
+                disabled={verifyBusy === p.id || p.id === currentUserId}
+                title={p.verified_at ? "Remover verificação" : "Marcar como verificado"}
+                className={`inline-flex items-center gap-1 rounded-full border-2 px-2.5 py-1 text-xs font-bold transition-colors disabled:opacity-40 ${
+                  p.verified_at
+                    ? "border-teal/40 bg-teal/10 text-teal hover:bg-teal/20"
+                    : "border-ink/15 text-ink-muted hover:border-teal hover:text-teal"
+                }`}
+              >
+                {verifyBusy === p.id ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <BadgeCheck className="h-3.5 w-3.5" />
+                )}
+                {p.verified_at ? "Verificado" : "Verificar"}
+              </button>
               {canEditRoles ? (
                 <>
                   <Select

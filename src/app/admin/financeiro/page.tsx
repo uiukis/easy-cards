@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { TrendingUp, Wallet, Clock, Truck, Users, FileText, Pencil } from "lucide-react";
+import { TrendingUp, Wallet, Clock, Truck, Users, FileText, Pencil, ShieldAlert } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEffectivePermissions } from "@/lib/get-permissions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
@@ -25,6 +25,7 @@ type FinRow = {
   buyer_name: string | null;
   sold_at: string | null;
   paid_at: string | null;
+  buyer_disputed_at: string | null;
   cards: { name: string; status: string } | { name: string; status: string }[] | null;
 };
 
@@ -61,7 +62,7 @@ export default async function FinanceiroPage() {
   const { data } = await supabase
     .from("card_finance")
     .select(
-      "card_id, final_price, delivery_method, dominaria_fee, dominaria_deposited_at, buyer_id, buyer_name, sold_at, paid_at, cards(name, status)"
+      "card_id, final_price, delivery_method, dominaria_fee, dominaria_deposited_at, buyer_id, buyer_name, sold_at, paid_at, buyer_disputed_at, cards(name, status)"
     );
   const rows = (data ?? []) as FinRow[];
 
@@ -79,6 +80,8 @@ export default async function FinanceiroPage() {
 
   const receivable = sold.filter((r) => !r.paid_at);
   const receivableTotal = receivable.reduce((s, r) => s + num(r.final_price), 0);
+
+  const disputed = rows.filter((r) => r.buyer_disputed_at);
 
   const domiFees = rows
     .filter((r) => r.delivery_method === "dominaria")
@@ -145,6 +148,28 @@ export default async function FinanceiroPage() {
           </div>
         }
       />
+
+      {disputed.length > 0 && (
+        <div className="mt-6 rounded-2xl border-2 border-destructive/40 bg-destructive/10 p-4">
+          <p className="flex items-center gap-2 text-sm font-bold text-destructive">
+            <ShieldAlert className="h-4 w-4" />
+            {disputed.length} compra(s) que o comprador diz não ter feito
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-ink">
+            {disputed.map((r) => (
+              <li key={r.card_id} className="flex items-center justify-between gap-2">
+                <span className="truncate font-semibold">{cardName(r)}</span>
+                <span className="shrink-0 text-xs text-ink-muted">
+                  vinculada a {r.buyer_name || "?"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-ink-muted">
+            Confere quem é o comprador certo em <span className="font-semibold">Cartas → Financeiro</span>.
+          </p>
+        </div>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (

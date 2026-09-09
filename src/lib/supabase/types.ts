@@ -9,6 +9,8 @@ export type Profile = {
   favorite_pokemon_sprite: string | null;
   wishlist_public: boolean;
   share_slug: string | null;
+  verified_at: string | null;
+  verified_by: string | null;
   created_at: string;
 };
 
@@ -57,6 +59,8 @@ export type CardFinance = {
   buyer_name: string | null;
   sold_at: string | null;
   paid_at: string | null;
+  buyer_confirmed_at: string | null;
+  buyer_disputed_at: string | null;
   notes: string | null;
   updated_by: string | null;
   updated_at: string;

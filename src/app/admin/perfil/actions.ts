@@ -45,7 +45,7 @@ export async function updateOwnProfile(input: {
   // Only re-hit PokéAPI when the favourite actually changed.
   const { data: current } = await supabase
     .from("profiles")
-    .select("favorite_pokemon, favorite_pokemon_sprite")
+    .select("favorite_pokemon, favorite_pokemon_sprite, verified_at")
     .eq("id", user.id)
     .single();
 
@@ -58,10 +58,11 @@ export async function updateOwnProfile(input: {
   }
 
   const patch: Record<string, unknown> = {
-    full_name: input.full_name,
     favorite_pokemon: fav || null,
     favorite_pokemon_sprite: fav ? sprite : null,
   };
+  // A verified name is locked — only the team changes it (keeps the ✓ honest).
+  if (!current?.verified_at) patch.full_name = input.full_name;
   // Keep profiles.phone in step with auth.users.phone (updated client-side).
   if (phoneDigits.length >= 10) patch.phone = phoneDigits;
 

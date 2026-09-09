@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Sparkles, Eye, EyeOff, KeyRound, Phone } from "lucide-react";
+import { Loader2, Sparkles, Eye, EyeOff, KeyRound, Phone, BadgeCheck } from "lucide-react";
 import type { Profile } from "@/lib/supabase/types";
 import { createClient } from "@/lib/supabase/client";
 import { maskPhoneBR, toE164BR } from "@/lib/phone";
@@ -95,7 +95,23 @@ export function PerfilClient({ profile }: { profile: Profile }) {
 
         <div className="space-y-1.5">
           <Label>Nome completo</Label>
-          <Input required value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <Input
+            required
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            disabled={!!profile.verified_at}
+          />
+          {profile.verified_at ? (
+            <p className="flex items-center gap-1.5 text-xs text-teal">
+              <BadgeCheck className="h-3.5 w-3.5" />
+              Conta verificada. Pra mudar o nome, fale com a equipe.
+            </p>
+          ) : (
+            <p className="text-xs text-ink-muted">
+              Conta ainda não verificada. Pediu pra alguém da equipe confirmar quem é você? Aí seu
+              nome completo aparece pros outros e você ganha o selo ✓.
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">

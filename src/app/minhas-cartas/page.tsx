@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { CustomerNav } from "@/components/CustomerNav";
 import { Reveal } from "@/components/Reveal";
 import { AddToBinderButton } from "./AddToBinderButton";
+import { PurchaseConfirm } from "./PurchaseConfirm";
 
 export default async function MinhasCartasPage() {
   const supabase = await createClient();
@@ -132,6 +133,11 @@ export default async function MinhasCartasPage() {
                         </Badge>
                       )}
                     </div>
+                    <PurchaseConfirm
+                      financeId={p.id}
+                      confirmedAt={p.buyer_confirmed_at}
+                      disputedAt={p.buyer_disputed_at}
+                    />
                     {card?.image_url && (
                       <AddToBinderButton
                         binders={binders ?? []}

@@ -13,6 +13,31 @@ export async function updateUserRole(id: string, role: UserRole) {
   revalidatePath("/admin/usuarios");
 }
 
+/** Mark that a real person was vouched for (or undo it). Requires manage_users. */
+export async function setUserVerified(id: string, verified: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (!me) throw new Error("Sem perfil.");
+  const perms = await getEffectivePermissions(supabase, user.id, me.role);
+  if (!perms.manage_users) throw new Error("Sem permissão.");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      verified_at: verified ? new Date().toISOString() : null,
+      verified_by: verified ? user.id : null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/desejos");
+}
+
 /** Correct a user's login phone (auth.users + profiles). Requires manage_users. */
 export async function updateUserPhone(id: string, rawPhone: string) {
   const supabase = await createClient();

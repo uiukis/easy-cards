@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, X, Users, LayoutGrid, ExternalLink } from "lucide-react";
+import { Search, X, Users, LayoutGrid, ExternalLink, BadgeCheck, ShieldQuestion } from "lucide-react";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { PokemonAvatar } from "@/components/PokemonAvatar";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ export type WishRow = {
   person_avatar: string | null;
   person_public: boolean;
   person_slug: string | null;
+  person_verified: boolean;
 };
 
 const PRIORITY: Record<number, { short: string; tone: string }> = {
@@ -71,7 +72,18 @@ export function DesejosClient({ rows }: { rows: WishRow[] }) {
   }, [filtered]);
 
   const byPerson = useMemo(() => {
-    const map = new Map<string, { name: string; avatar: string | null; phone: string | null; slug: string | null; pub: boolean; rows: WishRow[] }>();
+    const map = new Map<
+      string,
+      {
+        name: string;
+        avatar: string | null;
+        phone: string | null;
+        slug: string | null;
+        pub: boolean;
+        verified: boolean;
+        rows: WishRow[];
+      }
+    >();
     for (const r of filtered) {
       const cur = map.get(r.user_id) ?? {
         name: r.person_name,
@@ -79,6 +91,7 @@ export function DesejosClient({ rows }: { rows: WishRow[] }) {
         phone: r.person_phone,
         slug: r.person_slug,
         pub: r.person_public,
+        verified: r.person_verified,
         rows: [],
       };
       cur.rows.push(r);
@@ -169,7 +182,17 @@ export function DesejosClient({ rows }: { rows: WishRow[] }) {
               <div className="flex items-center gap-3">
                 <PokemonAvatar sprite={p.avatar} name={p.name} size={36} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-ink">{p.name}</p>
+                  <p className="flex items-center gap-1 truncate text-sm font-semibold text-ink">
+                    <span className="truncate">{p.name}</span>
+                    {p.verified ? (
+                      <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-teal" aria-label="Verificado" />
+                    ) : (
+                      <ShieldQuestion
+                        className="h-3.5 w-3.5 shrink-0 text-ink-muted/50"
+                        aria-label="Não verificado"
+                      />
+                    )}
+                  </p>
                   <p className="text-xs text-ink-muted">{p.rows.length} carta(s)</p>
                 </div>
                 {waLink(p.phone) && (

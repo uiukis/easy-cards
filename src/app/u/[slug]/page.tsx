@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Sparkles } from "lucide-react";
+import { Sparkles, BadgeCheck, ShieldQuestion } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SITE } from "@/lib/site";
 import { WhatsAppIcon } from "@/components/icons";
@@ -21,6 +21,7 @@ type PublicItem = {
 
 type PublicWishlist = {
   name: string | null;
+  verified: boolean;
   avatar: string | null;
   pokemon: string | null;
   items: PublicItem[];
@@ -88,11 +89,18 @@ export default async function PublicWishlistPage({
           <PokemonAvatar sprite={data.avatar} name={who} size={52} />
           <div>
             <p className="font-comic text-sm text-primary">Lista de desejo</p>
-            <h1 className="font-display text-2xl text-ink text-comic-shadow-sm sm:text-3xl">
+            <h1 className="flex items-center gap-1.5 font-display text-2xl text-ink text-comic-shadow-sm sm:text-3xl">
               {who.toUpperCase()}
+              {data.verified && <BadgeCheck className="h-5 w-5 text-teal" aria-label="Verificado" />}
             </h1>
           </div>
         </div>
+        {!data.verified && (
+          <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-surface-alt px-2.5 py-1.5 text-xs text-ink-muted">
+            <ShieldQuestion className="h-3.5 w-3.5 shrink-0" />
+            Conta ainda não verificada pela Easy Cards — confirme quem é antes de fechar negócio.
+          </p>
+        )}
         <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-muted">
           <Sparkles className="h-4 w-4 text-primary" />
           {data.items.length} {data.items.length === 1 ? "carta procurada" : "cartas procuradas"} — se

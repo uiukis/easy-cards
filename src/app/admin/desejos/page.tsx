@@ -23,7 +23,7 @@ export default async function AdminDesejosPage() {
   const { data } = await supabase
     .from("wishlist_items")
     .select(
-      "id, name, set_name, card_number, image_url, rarity, priority, note, acquired, created_at, user_id, profiles(full_name, phone, favorite_pokemon_sprite, wishlist_public, share_slug)"
+      "id, name, set_name, card_number, image_url, rarity, priority, note, acquired, created_at, user_id, profiles(full_name, phone, favorite_pokemon_sprite, wishlist_public, share_slug, verified_at)"
     )
     .eq("acquired", false)
     .order("priority", { ascending: true })
@@ -36,6 +36,7 @@ export default async function AdminDesejosPage() {
       favorite_pokemon_sprite: string | null;
       wishlist_public: boolean;
       share_slug: string | null;
+      verified_at: string | null;
     } | null;
     return {
       id: r.id,
@@ -53,6 +54,7 @@ export default async function AdminDesejosPage() {
       person_avatar: p?.favorite_pokemon_sprite ?? null,
       person_public: p?.wishlist_public ?? false,
       person_slug: p?.share_slug ?? null,
+      person_verified: !!p?.verified_at,
     };
   });
 
