@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { User } from "lucide-react";
 import { SITE } from "@/lib/site";
+import { createClient } from "@/lib/supabase/client";
 import { WhatsAppIcon } from "./icons";
 import { ThemeToggle } from "./ThemeToggle";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ const LINKS = [
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [shopOn, setShopOn] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -28,6 +30,17 @@ export function Navbar() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    createClient()
+      .from("site_settings")
+      .select("value")
+      .eq("key", "shop_enabled")
+      .maybeSingle()
+      .then(({ data }) => setShopOn(data?.value === true));
+  }, []);
+
+  const links = shopOn ? [{ href: "/loja", label: "Loja" }, ...LINKS] : LINKS;
 
   return (
     <motion.header
@@ -53,7 +66,7 @@ export function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-4 md:flex lg:gap-6">
-          {LINKS.map((link) => (
+          {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}

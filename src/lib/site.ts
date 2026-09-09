@@ -2,6 +2,9 @@ export const SITE = {
   name: "Easy Cards",
   tagline: "Compra · Venda · Troca",
   whatsappGroup: "https://chat.whatsapp.com/HTsXTpTuDHJ7WOBfAcWAxk",
+  // Direct line for "quero essa carta" on the storefront. Empty -> falls back
+  // to the group invite. Fill with digits only, e.g. "5585999999999".
+  whatsappNumber: "",
   instagram: "https://www.instagram.com/easycards.tcg/",
   instagramHandle: "@easycards.tcg",
   creator: {

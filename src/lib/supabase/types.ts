@@ -37,6 +37,8 @@ export type Card = {
   description: string | null;
   condition: string | null;
   status: "available" | "in_auction" | "sold";
+  in_stock: boolean;
+  price: number | null;
   tcg_api_id: string | null;
   created_by: string | null;
   created_at: string;

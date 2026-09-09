@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "motion/react";
 import {
   Plus,
@@ -14,16 +15,21 @@ import {
   Search,
   Download,
   X,
+  Store,
+  Heart,
+  ExternalLink,
 } from "lucide-react";
 import type { Card, CardFinance } from "@/lib/supabase/types";
 import { toCsv, downloadCsv } from "@/lib/csv";
-import { createCard, updateCard, deleteCard, type CardInput } from "./actions";
+import { maskBRL, brlFromNumber, brlToPlain } from "@/lib/money";
+import { createCard, updateCard, deleteCard, setShopEnabled, type CardInput } from "./actions";
 import { CardSearch, type SearchResult } from "./CardSearch";
 import { FinanceModal } from "./FinanceModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -62,21 +68,35 @@ const STATUS_VARIANT: Record<Card["status"], "secondary" | "default" | "outline"
   sold: "outline",
 };
 
+export type WishMatch = {
+  name: string;
+  phone: string | null;
+  note: string | null;
+  priority: number;
+};
+
 export function CartasClient({
   initialCards,
   canViewFinance,
   financeByCardId,
   openFinanceCardId = null,
+  shopEnabled = false,
+  wishlistMatches = {},
 }: {
   initialCards: Card[];
   canViewFinance: boolean;
   financeByCardId: Record<string, CardFinance>;
   openFinanceCardId?: string | null;
+  shopEnabled?: boolean;
+  wishlistMatches?: Record<string, WishMatch[]>;
 }) {
   const router = useRouter();
   const [cards, setCards] = useState(initialCards);
   const [editing, setEditing] = useState<Card | "new" | null>(null);
   const [financeFor, setFinanceFor] = useState<Card | null>(null);
+  const [shopOn, setShopOn] = useState(shopEnabled);
+  const [shopBusy, startShop] = useTransition();
+  const [wishFor, setWishFor] = useState<{ card: Card; matches: WishMatch[] } | null>(null);
 
   // Deep link from /admin/financeiro — open a card's finance modal straight away.
   useEffect(() => {
@@ -176,6 +196,35 @@ export function CartasClient({
           </Button>
         }
       />
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-ink/10 bg-surface p-3">
+        <label className="flex items-center gap-3">
+          <Switch
+            checked={shopOn}
+            disabled={shopBusy}
+            onCheckedChange={(v) => {
+              setShopOn(v);
+              startShop(() => setShopEnabled(v));
+            }}
+          />
+          <span className="flex items-center gap-1.5 text-sm font-bold text-ink">
+            <Store className="h-4 w-4 text-primary" />
+            Vitrine pública {shopOn ? "ligada" : "desligada"}
+          </span>
+        </label>
+        <div className="flex items-center gap-2 text-xs text-ink-muted">
+          <span className="hidden sm:inline">
+            Mostra em <span className="font-semibold">/loja</span> as cartas marcadas “à venda”.
+          </span>
+          <Link
+            href="/loja"
+            target="_blank"
+            className="inline-flex items-center gap-1 rounded-full border-2 border-ink/15 px-2.5 py-1 font-bold text-ink hover:bg-surface-alt"
+          >
+            Ver <ExternalLink className="h-3 w-3" />
+          </Link>
+        </div>
+      </div>
 
       {cards.length > 0 && (
         <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -318,6 +367,23 @@ export function CartasClient({
                           {fin?.paid_at ? "Pago" : "A receber"}
                         </span>
                       )}
+                      {card.in_stock && (
+                        <span className="flex items-center gap-0.5 rounded bg-teal/15 px-1.5 py-0.5 font-semibold text-teal">
+                          <Store className="h-3 w-3" /> à venda
+                          {card.price != null && ` · R$ ${Number(card.price).toFixed(2)}`}
+                        </span>
+                      )}
+                      {wishlistMatches[card.id]?.length > 0 && (
+                        <button
+                          onClick={() =>
+                            setWishFor({ card, matches: wishlistMatches[card.id] })
+                          }
+                          className="flex items-center gap-0.5 rounded bg-orange/15 px-1.5 py-0.5 font-semibold text-orange-deep hover:bg-orange/25"
+                        >
+                          <Heart className="h-3 w-3" /> {wishlistMatches[card.id].length}{" "}
+                          {wishlistMatches[card.id].length === 1 ? "quer" : "querem"}
+                        </button>
+                      )}
                     </p>
                   </div>
 
@@ -393,6 +459,56 @@ export function CartasClient({
         loading={deletingId !== null}
         onConfirm={() => confirmDeleteId && handleDelete(confirmDeleteId)}
       />
+
+      <Dialog open={wishFor !== null} onOpenChange={(v) => !v && setWishFor(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 font-display tracking-wide">
+              <Heart className="h-4 w-4 text-orange-deep" />
+              QUEREM {wishFor?.card.name.toUpperCase()}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-ink-muted">
+            Gente com essa carta na lista de desejo. Manda um alô que ela chegou.
+          </p>
+          <ul className="space-y-1.5">
+            {wishFor?.matches.map((m, i) => {
+              const digits = (m.phone ?? "").replace(/\D/g, "");
+              const wa = digits.length >= 10 ? `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}` : null;
+              return (
+                <li
+                  key={i}
+                  className="flex items-center justify-between gap-2 rounded-xl border-2 border-ink/10 p-2.5 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-ink">{m.name}</p>
+                    {m.note && <p className="truncate text-xs text-ink-muted">“{m.note}”</p>}
+                  </div>
+                  {wa ? (
+                    <a
+                      href={
+                        wa +
+                        `?text=${encodeURIComponent(
+                          `Oi! Apareceu a carta ${wishFor?.card.name}${
+                            wishFor?.card.card_number ? ` (${wishFor.card.card_number})` : ""
+                          } que tá na sua lista de desejo na Easy Cards 👀`
+                        )}`
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 rounded-full bg-teal px-3 py-1 text-xs font-bold text-white"
+                    >
+                      WhatsApp
+                    </a>
+                  ) : (
+                    <span className="shrink-0 text-xs text-ink-muted">sem telefone</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -447,9 +563,11 @@ function CardModal({
     setSaving(true);
     setError(null);
 
+    const payload: CardInput = { ...form, price: brlToPlain(form.price) };
+
     try {
       if (card) {
-        await updateCard(card.id, form);
+        await updateCard(card.id, payload);
         onSaved({
           ...card,
           name: form.name,
@@ -459,9 +577,11 @@ function CardModal({
           condition: form.condition || null,
           description: form.description || null,
           status: form.status,
+          in_stock: form.in_stock,
+          price: payload.price ? Number(payload.price) : null,
         });
       } else {
-        await createCard(form);
+        await createCard(payload);
         window.location.reload();
       }
     } catch (err) {
@@ -609,6 +729,27 @@ function CardModal({
               />
             </div>
 
+            <div className="rounded-xl border-2 border-ink/10 p-3">
+              <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+                <Switch
+                  checked={form.in_stock}
+                  onCheckedChange={(v) => setForm((f) => ({ ...f, in_stock: v }))}
+                />
+                Mostrar na vitrine (à venda)
+              </label>
+              {form.in_stock && (
+                <div className="mt-3 space-y-1.5">
+                  <Label>Preço na vitrine (opcional — vazio = “consultar”)</Label>
+                  <Input
+                    inputMode="numeric"
+                    placeholder="R$ 0,00"
+                    value={form.price}
+                    onChange={(e) => setForm((f) => ({ ...f, price: maskBRL(e.target.value) }))}
+                  />
+                </div>
+              )}
+            </div>
+
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             <Button type="submit" disabled={saving} className="w-full">
@@ -632,5 +773,7 @@ function toFormState(card: Card | null): CardInput {
     description: card?.description ?? "",
     status: card?.status ?? "available",
     tcg_api_id: card?.tcg_api_id ?? "",
+    in_stock: card?.in_stock ?? false,
+    price: card?.price != null ? brlFromNumber(Number(card.price)) : "",
   };
 }
