@@ -1,9 +1,18 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.20.0**.
+Datas no fuso de Brasília. Versão atual: **1.21.0**.
 
 ---
+
+## 1.21.0 — Conta verificada · 09/09/2026
+
+Como o cadastro é só telefone + senha (sem SMS, que é pago), qualquer um pode se cadastrar com qualquer número. Em vez de bloquear, a gente tirou o valor de se passar por outro:
+
+- **Selo de verificado** — a equipe marca a conta como verificada quando tem certeza de que é a pessoa mesmo (falou no grupo, comprou pessoalmente…). Botão em *Usuários*. O time e os fundadores já entram verificados.
+- **Perfil público mostra menos até verificar** — `/u/<link>` de conta não verificada mostra só o primeiro nome + aviso "confirme quem é antes de fechar negócio". Verificou, aparece o nome completo + ✓.
+- **Nome travado depois de verificado** — só a equipe muda, pra o selo não virar mentira.
+- **"Foi você?"** — quando a loja registra uma compra no seu nome, aparece em *Minhas cartas* um "foi você? [sim] [não fui eu]". Se alguém diz "não fui eu", cai um alerta no topo do *Financeiro*.
 
 ## 1.20.0 — Página de Novidades · 09/09/2026
 
