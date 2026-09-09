@@ -18,6 +18,7 @@ export async function createBinder(input: {
   name: string;
   description?: string;
   gridSize: string;
+  setTotal?: number;
   cards?: NewBinderCard[];
 }) {
   const supabase = await createClient();
@@ -43,6 +44,7 @@ export async function createBinder(input: {
       name: input.name || "Meu Fichário",
       description: input.description?.trim() || null,
       grid_size: input.gridSize,
+      set_total: input.setTotal ?? null,
     })
     .select()
     .single();

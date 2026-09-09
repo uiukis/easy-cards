@@ -10,6 +10,7 @@ export type CoverStats = {
   want: number;
   images: number;
   pages: number;
+  setTotal?: number | null;
 };
 
 export function BinderCover({
@@ -46,11 +47,16 @@ export function BinderCover({
     }
   }
 
-  const cells: { label: string; value: number; tone?: string }[] = [
-    { label: "Cartas", value: stats.have },
-    { label: "Quero", value: stats.want, tone: "text-orange-deep" },
-    { label: "Imagens", value: stats.images },
-    { label: "Páginas", value: stats.pages },
+  const pct = stats.setTotal ? Math.round((stats.have / stats.setTotal) * 100) : null;
+  const cells: { label: string; value: string; tone?: string }[] = [
+    stats.setTotal
+      ? { label: "Do set", value: `${stats.have}/${stats.setTotal}` }
+      : { label: "Cartas", value: String(stats.have) },
+    { label: "Quero", value: String(stats.want), tone: "text-orange-deep" },
+    { label: "Imagens", value: String(stats.images) },
+    pct != null
+      ? { label: "Completo", value: `${pct}%`, tone: "text-teal" }
+      : { label: "Páginas", value: String(stats.pages) },
   ];
 
   return (

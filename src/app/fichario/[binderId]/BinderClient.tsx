@@ -230,6 +230,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     want: wantCount,
     images: imageCount,
     pages: totalPages,
+    setTotal: binder.set_total,
   };
 
   function goToPage(p: number) {

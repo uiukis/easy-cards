@@ -161,7 +161,8 @@ export function NewBinderDialog({ open, onOpenChange }: { open: boolean; onOpenC
     name: string,
     gridSize: string,
     cards?: PokemonCard[],
-    description?: string
+    description?: string,
+    setTotal?: number
   ) {
     setCreating(true);
     setError(null);
@@ -170,6 +171,7 @@ export function NewBinderDialog({ open, onOpenChange }: { open: boolean; onOpenC
         name: name.trim() || "Meu Fichário",
         description,
         gridSize,
+        setTotal,
         cards: cards?.map(toNewBinderCard),
       });
       onOpenChange(false);
@@ -334,7 +336,9 @@ export function NewBinderDialog({ open, onOpenChange }: { open: boolean; onOpenC
                 <Button
                   className="w-full"
                   disabled={creating || setCardsLoading || setCards.length === 0}
-                  onClick={() => handleCreate(setName, "4x4", setCards)}
+                  onClick={() =>
+                    handleCreate(setName, "4x4", setCards, undefined, selectedSet.printedTotal)
+                  }
                 >
                   {creating && <Loader2 className="h-4 w-4 animate-spin" />}
                   Criar fichário · {setCards.length} cartas

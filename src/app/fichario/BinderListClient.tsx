@@ -130,12 +130,28 @@ export function BinderListClient({ initial }: { initial: BinderWithPreview[] }) 
       )}
 
       {binders.length === 0 ? (
-        <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-halftone py-20 text-center">
-          <BookOpen className="h-10 w-10 text-ink-muted" />
-          <p className="text-sm text-ink-muted">Você ainda não tem nenhum fichário. Bora criar o primeiro?</p>
-          <Button onClick={() => setNewOpen(true)} variant="secondary">
+        <div className="mt-8 rounded-[2rem] border-2 border-dashed border-border bg-halftone p-8 text-center sm:p-12">
+          <BookOpen className="mx-auto h-10 w-10 text-ink-muted" />
+          <h2 className="mt-3 font-display text-2xl text-ink">SEU PRIMEIRO FICHÁRIO</h2>
+          <p className="mx-auto mt-1 max-w-md text-sm text-ink-muted">
+            Escolha um jeito de começar — dá pra montar do zero, puxar um set inteiro de uma vez ou
+            juntar as cartas de um Pokémon só.
+          </p>
+          <div className="mx-auto mt-6 grid max-w-xl gap-2.5 text-left sm:grid-cols-3">
+            {[
+              { t: "Do zero", d: "Você adiciona as cartas." },
+              { t: "Set completo", d: "Todas as cartas de um set." },
+              { t: "Um Pokémon", d: "As cartas dele que você quiser." },
+            ].map((o) => (
+              <div key={o.t} className="rounded-2xl border-2 border-ink/10 bg-surface p-3">
+                <p className="text-sm font-bold text-ink">{o.t}</p>
+                <p className="mt-0.5 text-xs text-ink-muted">{o.d}</p>
+              </div>
+            ))}
+          </div>
+          <Button onClick={() => setNewOpen(true)} className="mt-6">
             <Plus className="h-4 w-4" />
-            Novo fichário
+            Começar
           </Button>
         </div>
       ) : (

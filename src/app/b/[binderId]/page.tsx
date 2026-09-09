@@ -128,10 +128,17 @@ export default async function SharedBinderPage({
             </div>
             <div className="grid grid-cols-4 divide-x-2 divide-ink/10 border-t-2 border-ink/10">
               {[
-                { label: "Cartas", value: haveCount },
+                binder.set_total
+                  ? { label: "Do set", value: `${haveCount}/${binder.set_total}` }
+                  : { label: "Cartas", value: haveCount },
                 { label: "Quero", value: wantCount },
                 { label: "Imagens", value: allCards.filter((c) => c.is_image).length },
-                { label: "Páginas", value: pages.length },
+                binder.set_total
+                  ? {
+                      label: "Completo",
+                      value: `${Math.round((haveCount / binder.set_total) * 100)}%`,
+                    }
+                  : { label: "Páginas", value: pages.length },
               ].map((c) => (
                 <div key={c.label} className="px-2 py-3 text-center">
                   <p className="font-display text-xl text-ink">{c.value}</p>

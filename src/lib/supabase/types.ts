@@ -139,6 +139,7 @@ export type Binder = {
   cover_image_url: string | null;
   cover_subtitle: string | null;
   page_backgrounds: Record<string, string>;
+  set_total: number | null;
   created_at: string;
 };
 
