@@ -40,6 +40,10 @@ export function BinderListClient({ initial }: { initial: BinderWithPreview[] }) 
           description: g.description,
           grid_size: g.grid_size,
           page_labels: g.page_labels ?? {},
+          cover_enabled: g.cover_enabled ?? false,
+          cover_image_url: g.cover_image_url ?? null,
+          cover_subtitle: g.cover_subtitle ?? null,
+          page_backgrounds: g.page_backgrounds ?? {},
           cards: g.cards.map((c) => ({
             tcg_api_id: c.tcg_api_id,
             name: c.name,
@@ -48,6 +52,8 @@ export function BinderListClient({ initial }: { initial: BinderWithPreview[] }) 
             image_url: c.image_url,
             rarity: c.rarity,
             types: c.types,
+            is_image: c.is_image ?? false,
+            want: c.want ?? false,
           })),
         }))
       );

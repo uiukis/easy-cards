@@ -28,12 +28,17 @@ import {
   Printer,
   Undo2,
   Redo2,
+  BookImage,
+  Image as ImageIcon,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import type { Binder, BinderCard } from "@/lib/supabase/types";
 import { PRICES_ENABLED } from "@/lib/features";
 import { uploadBinderImage } from "@/lib/binder-image";
 import type { SearchResult } from "@/app/admin/cartas/CardSearch";
 import { AddCardsDialog } from "../AddCardsDialog";
+import { BinderCover, CoverToggleHint } from "../BinderCover";
 import {
   addManyToBinder,
   addImageSlot,
@@ -42,6 +47,9 @@ import {
   renameBinder,
   updateBinderDescription,
   updatePageLabels,
+  updateBinderCover,
+  updatePageBackgrounds,
+  updateCardWant,
   setBinderShared,
   reorderBinder,
   updateCardVariant,
@@ -180,6 +188,19 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const [editingLabelPage, setEditingLabelPage] = useState<number | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
 
+  // cover ("capa")
+  const [coverEnabled, setCoverEnabled] = useState(binder.cover_enabled);
+  const [coverImageUrl, setCoverImageUrl] = useState(binder.cover_image_url);
+  const [coverSubtitle, setCoverSubtitle] = useState(binder.cover_subtitle);
+  const [showCover, setShowCover] = useState(binder.cover_enabled);
+  const [coverHintDismissed, setCoverHintDismissed] = useState(false);
+
+  // per-page background images
+  const [pageBackgrounds, setPageBackgrounds] = useState<Record<string, string>>(
+    binder.page_backgrounds ?? {}
+  );
+  const [uploadingBg, setUploadingBg] = useState<number | null>(null);
+
   // arrangement undo/redo — stacks of card-id orders
   const [past, setPast] = useState<string[][]>([]);
   const [futureOrders, setFutureOrders] = useState<string[][]>([]);
@@ -189,6 +210,16 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const pages = chunk(cards, cardsPerPage);
   const totalPages = pages.length;
   const safePage = Math.min(page, totalPages - 1);
+
+  const wantCount = cards.filter((c) => c.want && !c.is_image).length;
+  const imageCount = cards.filter((c) => c.is_image).length;
+  const coverStats = {
+    total: cards.length,
+    have: cards.filter((c) => !c.want && !c.is_image).length,
+    want: wantCount,
+    images: imageCount,
+    pages: totalPages,
+  };
 
   function goToPage(p: number) {
     setPage(Math.max(0, Math.min(p, totalPages - 1)));
@@ -255,6 +286,54 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     setPageLabels(next);
     setEditingLabelPage(null);
     updatePageLabels(binder.id, next);
+  }
+
+  // --- cover --------------------------------------------------------------
+  function enableCover() {
+    setCoverEnabled(true);
+    setShowCover(true);
+    updateBinderCover(binder.id, { enabled: true });
+  }
+  function disableCover() {
+    setCoverEnabled(false);
+    setShowCover(false);
+    updateBinderCover(binder.id, { enabled: false });
+  }
+  function handleCoverSubtitle(v: string) {
+    setCoverSubtitle(v || null);
+    updateBinderCover(binder.id, { subtitle: v });
+  }
+  function handleCoverImage(url: string | null) {
+    setCoverImageUrl(url);
+    updateBinderCover(binder.id, { imageUrl: url });
+  }
+
+  // --- per-page background -----------------------------------------------
+  async function handleSetPageBackground(file: File, pageIndex: number) {
+    setUploadingBg(pageIndex);
+    try {
+      const url = await uploadBinderImage(file);
+      const next = { ...pageBackgrounds, [String(pageIndex)]: url };
+      setPageBackgrounds(next);
+      updatePageBackgrounds(binder.id, next);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Não deu pra enviar a imagem.");
+    } finally {
+      setUploadingBg(null);
+    }
+  }
+  function handleClearPageBackground(pageIndex: number) {
+    const next = { ...pageBackgrounds };
+    delete next[String(pageIndex)];
+    setPageBackgrounds(next);
+    updatePageBackgrounds(binder.id, next);
+  }
+
+  // --- tenho / quero -----------------------------------------------------
+  function handleToggleWant(cardId: string, current: boolean) {
+    const value = !current;
+    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, want: value } : c)));
+    updateCardWant(cardId, value);
   }
 
   async function handleGridChange(size: string) {
@@ -364,6 +443,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         rarity: c.rarity ?? null,
         types: c.types ?? null,
         is_image: false,
+        want: false,
         created_at: new Date().toISOString(),
       }));
 
@@ -405,6 +485,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         rarity: null,
         types: null,
         is_image: true,
+        want: false,
         created_at: new Date().toISOString(),
       };
       setCards((prev) => {
@@ -564,9 +645,10 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     const pc = pages[pageIndex] ?? [];
     const empties = Math.max(0, cardsPerPage - pc.length);
     const label = pageLabels[String(pageIndex)];
+    const bg = pageBackgrounds[String(pageIndex)];
     return (
       <div className="min-w-0 flex-1">
-        <div className="mb-2 flex items-center justify-center print:hidden">
+        <div className="mb-2 flex items-center justify-center gap-2 print:hidden">
           {editingLabelPage === pageIndex ? (
             <div className="flex items-center gap-1.5">
               <Input
@@ -605,6 +687,35 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
               )}
             </button>
           )}
+
+          {editingLabelPage !== pageIndex &&
+            (bg ? (
+              <button
+                onClick={() => handleClearPageBackground(pageIndex)}
+                className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold text-orange-deep transition-colors hover:text-ink"
+              >
+                <BookImage className="h-3 w-3" /> tirar fundo
+              </button>
+            ) : (
+              <label className="flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold text-ink-muted opacity-60 transition-colors hover:text-ink hover:opacity-100">
+                {uploadingBg === pageIndex ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <BookImage className="h-3 w-3" />
+                )}{" "}
+                fundo
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleSetPageBackground(f, pageIndex);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            ))}
         </div>
 
         <motion.div
@@ -612,6 +723,17 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
+          style={
+            bg
+              ? {
+                  backgroundImage: `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(${JSON.stringify(
+                    bg
+                  )})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : undefined
+          }
           className={`grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8 print:hidden`}
         >
           {pc.map((card) => (
@@ -644,7 +766,9 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
               } ${
                 selectedIds.has(card.id) || dragOverId === card.id
                   ? "border-orange-deep ring-2 ring-orange-deep"
-                  : "border-ink/10"
+                  : card.want && !card.is_image
+                    ? "border-dashed border-orange/70"
+                    : "border-ink/10"
               } ${draggedId === card.id ? "opacity-30" : ""}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
@@ -652,8 +776,16 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                 src={card.image_url}
                 alt={card.name}
                 draggable={false}
-                className="h-full w-full object-cover"
+                className={`h-full w-full object-cover ${
+                  card.want && !card.is_image ? "opacity-45 saturate-50" : ""
+                }`}
               />
+
+              {card.want && !card.is_image && (
+                <span className="pointer-events-none absolute left-0 top-2 bg-orange-deep px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+                  Quero
+                </span>
+              )}
 
               {selectMode ? (
                 <div
@@ -707,6 +839,29 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                 <div className="absolute bottom-1 left-1">
                   <PriceBadge name={card.name} cardNumber={card.card_number} />
                 </div>
+              )}
+
+              {!selectMode && !card.is_image && !PRICES_ENABLED && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleWant(card.id, card.want);
+                  }}
+                  aria-label={card.want ? "Tenho essa carta" : "Quero essa carta"}
+                  title={card.want ? "Marcar como: Tenho" : "Marcar como: Quero"}
+                  className={`absolute bottom-1 left-1 flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold backdrop-blur-sm transition-opacity ${
+                    card.want
+                      ? "bg-orange-deep text-white"
+                      : "bg-black/60 text-white opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  {card.want ? (
+                    <BookmarkCheck className="h-2.5 w-2.5" />
+                  ) : (
+                    <Bookmark className="h-2.5 w-2.5" />
+                  )}
+                  {card.want ? "Quero" : "Tenho"}
+                </button>
               )}
 
               {!selectMode && !card.is_image && (
@@ -894,6 +1049,16 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
             <Printer className="h-4 w-4" />
             Exportar PDF
           </Button>
+          <Button
+            variant={coverEnabled && showCover ? "default" : "outline"}
+            onClick={() => {
+              if (!coverEnabled) enableCover();
+              else setShowCover((v) => !v);
+            }}
+          >
+            <ImageIcon className="h-4 w-4" />
+            Capa
+          </Button>
           <Button variant="outline" onClick={() => setShareOpen(true)}>
             <Share2 className="h-4 w-4" />
             Compartilhar
@@ -904,6 +1069,32 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
           </Button>
         </div>
       </div>
+
+      {!coverEnabled && !coverHintDismissed && cards.length > 0 && (
+        <div className="mt-4">
+          <CoverToggleHint onEnable={enableCover} onDismiss={() => setCoverHintDismissed(true)} />
+        </div>
+      )}
+
+      {coverEnabled && showCover && (
+        <div className="mt-5 print:hidden">
+          <BinderCover
+            name={name}
+            subtitle={coverSubtitle}
+            imageUrl={coverImageUrl}
+            stats={coverStats}
+            editable
+            onSubtitleChange={handleCoverSubtitle}
+            onImageChange={handleCoverImage}
+          />
+          <button
+            onClick={disableCover}
+            className="mt-1.5 text-xs font-semibold text-ink-muted hover:text-ink"
+          >
+            desativar capa
+          </button>
+        </div>
+      )}
 
       {cards.length === 0 ? (
         <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-halftone py-20 text-center print:hidden">
@@ -1041,17 +1232,49 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
 
           {/* print-only: every page, one per sheet */}
           <div className="hidden print:block">
+            {coverEnabled && (
+              <div className="break-after-page">
+                {coverImageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- uploaded cover art
+                  <img
+                    src={coverImageUrl}
+                    alt=""
+                    className="mb-4 max-h-[60vh] w-full rounded-xl object-cover"
+                  />
+                )}
+                <h1 className="font-display text-3xl tracking-wide text-ink">{name.toUpperCase()}</h1>
+                {coverSubtitle && <p className="mt-1 text-sm text-ink-muted">{coverSubtitle}</p>}
+                <p className="mt-3 text-sm text-ink-muted">
+                  {coverStats.have} cartas · {coverStats.want} na wishlist · {coverStats.pages} páginas
+                </p>
+              </div>
+            )}
             {pages.map((pc, pi) => (
               <div key={pi} className={pi < pages.length - 1 ? "break-after-page" : ""}>
                 {pageLabels[String(pi)] && (
                   <p className="mb-2 font-display text-lg text-ink">{pageLabels[String(pi)]}</p>
                 )}
-                <div className={`grid ${COLS_CLASS[cols]} gap-2`}>
+                <div
+                  className={`grid ${COLS_CLASS[cols]} gap-2 rounded-xl p-2`}
+                  style={
+                    pageBackgrounds[String(pi)]
+                      ? {
+                          backgroundImage: `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${JSON.stringify(
+                            pageBackgrounds[String(pi)]
+                          )})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }
+                      : undefined
+                  }
+                >
                   {pc.map((card) => (
                   <div
                     key={card.id}
                     style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
-                    className="aspect-[5/7] overflow-hidden rounded-lg border border-ink/20"
+                    className={`relative aspect-[5/7] overflow-hidden rounded-lg border border-ink/20 ${
+                      card.want && !card.is_image ? "opacity-60" : ""
+                    }`}
                   >
                       {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
                       <img
@@ -1059,6 +1282,11 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                         alt={card.name}
                         className="h-full w-full object-cover"
                       />
+                      {card.want && !card.is_image && (
+                        <span className="absolute left-0 top-1 bg-orange-deep px-1 text-[8px] font-bold uppercase text-white">
+                          Quero
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

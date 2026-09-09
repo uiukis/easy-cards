@@ -74,6 +74,10 @@ export type GuestBinderPayload = {
   description: string | null;
   grid_size: string;
   page_labels: Record<string, string>;
+  cover_enabled?: boolean;
+  cover_image_url?: string | null;
+  cover_subtitle?: string | null;
+  page_backgrounds?: Record<string, string>;
   cards: {
     tcg_api_id: string | null;
     name: string;
@@ -82,6 +86,8 @@ export type GuestBinderPayload = {
     image_url: string;
     rarity: string | null;
     types: string | null;
+    is_image?: boolean;
+    want?: boolean;
   }[];
 };
 
@@ -109,6 +115,10 @@ export async function importGuestBinders(guests: GuestBinderPayload[]) {
         description: g.description,
         grid_size: g.grid_size || "3x3",
         page_labels: g.page_labels ?? {},
+        cover_enabled: g.cover_enabled ?? false,
+        cover_image_url: g.cover_image_url ?? null,
+        cover_subtitle: g.cover_subtitle ?? null,
+        page_backgrounds: g.page_backgrounds ?? {},
       })
       .select("id")
       .single();
@@ -125,6 +135,8 @@ export async function importGuestBinders(guests: GuestBinderPayload[]) {
         image_url: c.image_url,
         rarity: c.rarity,
         types: c.types,
+        is_image: c.is_image ?? false,
+        want: c.want ?? false,
         position: i,
       }));
       const { error: cardsErr } = await supabase.from("binder_cards").insert(rows);
@@ -153,6 +165,39 @@ export async function updatePageLabels(id: string, labels: Record<string, string
   if (error) throw new Error(error.message);
   revalidatePath("/fichario");
   revalidatePath(`/b/${id}`);
+}
+
+export async function updateBinderCover(
+  id: string,
+  input: { enabled?: boolean; imageUrl?: string | null; subtitle?: string | null }
+) {
+  const supabase = await createClient();
+  const patch: Record<string, unknown> = {};
+  if (input.enabled !== undefined) patch.cover_enabled = input.enabled;
+  if (input.imageUrl !== undefined) patch.cover_image_url = input.imageUrl || null;
+  if (input.subtitle !== undefined) patch.cover_subtitle = input.subtitle?.trim() || null;
+  const { error } = await supabase.from("binders").update(patch).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+  revalidatePath(`/b/${id}`);
+}
+
+export async function updatePageBackgrounds(id: string, backgrounds: Record<string, string>) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("binders")
+    .update({ page_backgrounds: backgrounds })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+  revalidatePath(`/b/${id}`);
+}
+
+export async function updateCardWant(cardId: string, want: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("binder_cards").update({ want }).eq("id", cardId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
 }
 
 export async function deleteBinder(id: string) {

@@ -11,6 +11,7 @@ export type GuestCard = {
   rarity: string | null;
   types: string | null;
   is_image?: boolean;
+  want?: boolean;
 };
 
 export type GuestBinder = {
@@ -19,6 +20,10 @@ export type GuestBinder = {
   description: string | null;
   grid_size: string;
   page_labels: Record<string, string>;
+  cover_enabled?: boolean;
+  cover_image_url?: string | null;
+  cover_subtitle?: string | null;
+  page_backgrounds?: Record<string, string>;
   cards: GuestCard[];
   created_at: string;
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
 import {
   Plus,
@@ -14,11 +15,16 @@ import {
   Check,
   Printer,
   Loader2,
+  Image as ImageIcon,
+  BookImage,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import type { SearchResult } from "@/app/admin/cartas/CardSearch";
 import type { GuestBinder, GuestCard } from "@/lib/guest-binders";
 import { uploadBinderImage } from "@/lib/binder-image";
 import { AddCardsDialog } from "./AddCardsDialog";
+import { BinderCover } from "./BinderCover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -77,6 +83,8 @@ export function GuestBinderClient({
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [editingLabelPage, setEditingLabelPage] = useState<number | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
+  const [showCover, setShowCover] = useState(!!binder.cover_enabled);
+  const [uploadingBg, setUploadingBg] = useState(false);
 
   const gridSize = GRID_SIZES[binder.grid_size] ? binder.grid_size : "3x3";
   const { cols } = GRID_SIZES[gridSize];
@@ -109,6 +117,36 @@ export function GuestBinderClient({
     else delete next[String(pageIndex)];
     patch({ page_labels: next });
     setEditingLabelPage(null);
+  }
+
+  const pageBackgrounds = binder.page_backgrounds ?? {};
+  const coverStats = {
+    total: binder.cards.length,
+    have: binder.cards.filter((c) => !c.want && !c.is_image).length,
+    want: binder.cards.filter((c) => c.want && !c.is_image).length,
+    images: binder.cards.filter((c) => c.is_image).length,
+    pages: totalPages,
+  };
+
+  function toggleWant(id: string) {
+    setCards(binder.cards.map((c) => (c.id === id ? { ...c, want: !c.want } : c)));
+  }
+
+  async function handleSetPageBackground(file: File, pageIndex: number) {
+    setUploadingBg(true);
+    try {
+      const url = await uploadBinderImage(file);
+      patch({ page_backgrounds: { ...pageBackgrounds, [String(pageIndex)]: url } });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Não deu pra enviar a imagem.");
+    } finally {
+      setUploadingBg(false);
+    }
+  }
+  function clearPageBackground(pageIndex: number) {
+    const next = { ...pageBackgrounds };
+    delete next[String(pageIndex)];
+    patch({ page_backgrounds: next });
   }
 
   function handleAdd(picked: SearchResult[], toCurrentPage: boolean) {
@@ -237,6 +275,20 @@ export function GuestBinderClient({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={binder.cover_enabled && showCover ? "default" : "outline"}
+            onClick={() => {
+              if (!binder.cover_enabled) {
+                patch({ cover_enabled: true });
+                setShowCover(true);
+              } else {
+                setShowCover((v) => !v);
+              }
+            }}
+          >
+            <ImageIcon className="h-4 w-4" />
+            Capa
+          </Button>
           <Button variant="outline" onClick={() => window.print()}>
             <Printer className="h-4 w-4" />
             Exportar PDF
@@ -247,6 +299,37 @@ export function GuestBinderClient({
           </Button>
         </div>
       </div>
+
+      {binder.cover_enabled && showCover && (
+        <div className="mt-5 print:hidden">
+          <BinderCover
+            name={binder.name}
+            subtitle={binder.cover_subtitle ?? null}
+            imageUrl={binder.cover_image_url ?? null}
+            stats={coverStats}
+            editable
+            onSubtitleChange={(v) => patch({ cover_subtitle: v || null })}
+            onImageChange={(url) => patch({ cover_image_url: url })}
+          />
+          <div className="mt-1.5 flex items-center gap-3">
+            <button
+              onClick={() => {
+                patch({ cover_enabled: false });
+                setShowCover(false);
+              }}
+              className="text-xs font-semibold text-ink-muted hover:text-ink"
+            >
+              desativar capa
+            </button>
+            <Link
+              href="/cadastro?next=/fichario"
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              criar conta pra salvar de verdade →
+            </Link>
+          </div>
+        </div>
+      )}
 
       {binder.cards.length === 0 ? (
         <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-halftone py-16 text-center print:hidden">
@@ -305,7 +388,7 @@ export function GuestBinderClient({
             )}
           </div>
 
-          <div className="mb-2 mt-4 flex items-center justify-center print:hidden">
+          <div className="mb-2 mt-4 flex items-center justify-center gap-2 print:hidden">
             {editingLabelPage === safePage ? (
               <div className="flex items-center gap-1.5">
                 <Input
@@ -334,6 +417,34 @@ export function GuestBinderClient({
                 {label || "+ rótulo"}
               </button>
             )}
+            {editingLabelPage !== safePage &&
+              (pageBackgrounds[String(safePage)] ? (
+                <button
+                  onClick={() => clearPageBackground(safePage)}
+                  className="flex items-center gap-1 text-xs font-bold text-orange-deep hover:text-ink"
+                >
+                  <BookImage className="h-3 w-3" /> tirar fundo
+                </button>
+              ) : (
+                <label className="flex cursor-pointer items-center gap-1 text-xs font-bold text-ink-muted opacity-60 hover:text-ink hover:opacity-100">
+                  {uploadingBg ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <BookImage className="h-3 w-3" />
+                  )}{" "}
+                  fundo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleSetPageBackground(f, safePage);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              ))}
           </div>
 
           <motion.div
@@ -341,6 +452,17 @@ export function GuestBinderClient({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            style={
+              pageBackgrounds[String(safePage)]
+                ? {
+                    backgroundImage: `linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url(${JSON.stringify(
+                      pageBackgrounds[String(safePage)]
+                    )})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                  }
+                : undefined
+            }
             className={`grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8 print:hidden`}
           >
             {pageCards.map((card) => (
@@ -367,7 +489,11 @@ export function GuestBinderClient({
                   handleDropOnCard(card.id);
                 }}
                 className={`group relative aspect-[5/7] cursor-grab overflow-hidden rounded-lg border-2 bg-bg shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${
-                  dragOverId === card.id ? "border-orange-deep ring-2 ring-orange-deep" : "border-ink/10"
+                  dragOverId === card.id
+                    ? "border-orange-deep ring-2 ring-orange-deep"
+                    : card.want && !card.is_image
+                      ? "border-dashed border-orange/70"
+                      : "border-ink/10"
                 } ${draggedId === card.id ? "opacity-30" : ""}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- external card art */}
@@ -375,8 +501,34 @@ export function GuestBinderClient({
                   src={card.image_url}
                   alt={card.name}
                   draggable={false}
-                  className="h-full w-full object-cover"
+                  className={`h-full w-full object-cover ${
+                    card.want && !card.is_image ? "opacity-45 saturate-50" : ""
+                  }`}
                 />
+                {card.want && !card.is_image && (
+                  <span className="pointer-events-none absolute left-0 top-2 bg-orange-deep px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                    Quero
+                  </span>
+                )}
+                {!card.is_image && (
+                  <button
+                    onClick={() => toggleWant(card.id)}
+                    aria-label={card.want ? "Tenho essa carta" : "Quero essa carta"}
+                    title={card.want ? "Marcar como: Tenho" : "Marcar como: Quero"}
+                    className={`absolute bottom-1 left-1 flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold backdrop-blur-sm transition-opacity ${
+                      card.want
+                        ? "bg-orange-deep text-white"
+                        : "bg-black/60 text-white opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    {card.want ? (
+                      <BookmarkCheck className="h-2.5 w-2.5" />
+                    ) : (
+                      <Bookmark className="h-2.5 w-2.5" />
+                    )}
+                    {card.want ? "Quero" : "Tenho"}
+                  </button>
+                )}
                 <button
                   onClick={() => handleRemove(card.id)}
                   aria-label={`Remover ${card.name}`}
@@ -433,8 +585,43 @@ export function GuestBinderClient({
             ))}
           </motion.div>
 
+          {binder.cards.length >= 3 && (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl border-2 border-orange/30 bg-orange/10 px-3 py-2 text-center text-xs text-ink print:hidden">
+              <span className="font-semibold text-orange-deep">
+                {binder.cards.length} cartas nesse fichário
+              </span>
+              <span className="text-ink-muted">
+                — some se você limpar o navegador. Leva 30 segundos pra garantir.
+              </span>
+              <Link
+                href="/cadastro?next=/fichario"
+                className="font-bold text-primary hover:underline"
+              >
+                Criar conta grátis →
+              </Link>
+            </div>
+          )}
+
           {/* print: all pages */}
           <div className="hidden print:block">
+            {binder.cover_enabled && (
+              <div className="break-after-page">
+                {binder.cover_image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element -- uploaded cover art
+                  <img
+                    src={binder.cover_image_url}
+                    alt=""
+                    className="mb-4 max-h-[60vh] w-full rounded-xl object-cover"
+                  />
+                )}
+                <h1 className="font-display text-3xl tracking-wide text-ink">
+                  {binder.name.toUpperCase()}
+                </h1>
+                {binder.cover_subtitle && (
+                  <p className="mt-1 text-sm text-ink-muted">{binder.cover_subtitle}</p>
+                )}
+              </div>
+            )}
             {pages.map((pc, pi) => (
               <div key={pi} className={pi < pages.length - 1 ? "break-after-page" : ""}>
                 {binder.page_labels[String(pi)] && (
@@ -442,14 +629,34 @@ export function GuestBinderClient({
                     {binder.page_labels[String(pi)]}
                   </p>
                 )}
-                <div className={`grid ${COLS_CLASS[cols]} gap-2`}>
+                <div
+                  className={`grid ${COLS_CLASS[cols]} gap-2 rounded-xl p-2`}
+                  style={
+                    pageBackgrounds[String(pi)]
+                      ? {
+                          backgroundImage: `linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url(${JSON.stringify(
+                            pageBackgrounds[String(pi)]
+                          )})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                        }
+                      : undefined
+                  }
+                >
                   {pc.map((card) => (
                     <div
                       key={card.id}
-                      className="aspect-[5/7] overflow-hidden rounded-lg border border-ink/20"
+                      className={`relative aspect-[5/7] overflow-hidden rounded-lg border border-ink/20 ${
+                        card.want && !card.is_image ? "opacity-60" : ""
+                      }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element -- external card art */}
                       <img src={card.image_url} alt={card.name} className="h-full w-full object-cover" />
+                      {card.want && !card.is_image && (
+                        <span className="absolute left-0 top-1 bg-orange-deep px-1 text-[8px] font-bold uppercase text-white">
+                          Quero
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

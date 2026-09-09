@@ -90,6 +90,16 @@ export function GuestFichario() {
         </Button>
       </div>
 
+      {binders.length >= GUEST_BINDER_LIMIT && (
+        <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border-2 border-orange/30 bg-orange/10 px-3 py-2 text-xs text-ink">
+          <span className="font-semibold text-orange-deep">Chegou no limite de convidado.</span>
+          <span className="text-ink-muted">Com conta você tem até 5 e eles ficam salvos de verdade.</span>
+          <Link href="/cadastro?next=/fichario" className="font-bold text-primary hover:underline">
+            Criar conta grátis →
+          </Link>
+        </div>
+      )}
+
       {binders.length === 0 ? (
         <div className="mt-8 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-border bg-halftone py-16 text-center">
           <BookOpen className="h-10 w-10 text-ink-muted" />

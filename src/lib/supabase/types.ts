@@ -85,6 +85,10 @@ export type Binder = {
   grid_size: string;
   share_enabled: boolean;
   page_labels: Record<string, string>;
+  cover_enabled: boolean;
+  cover_image_url: string | null;
+  cover_subtitle: string | null;
+  page_backgrounds: Record<string, string>;
   created_at: string;
 };
 
@@ -103,5 +107,6 @@ export type BinderCard = {
   rarity: string | null;
   types: string | null;
   is_image: boolean;
+  want: boolean;
   created_at: string;
 };
