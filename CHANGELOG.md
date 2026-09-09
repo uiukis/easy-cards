@@ -1,9 +1,14 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.19.0**.
+Datas no fuso de Brasília. Versão atual: **1.20.0**.
 
 ---
+
+## 1.20.0 — Página de Novidades · 09/09/2026
+
+- Nova página pública **`/novidades`** (link na navbar) com o resumo do que o site faz, pra compartilhar com a galera.
+- A permissão **"Ver listas de desejo dos usuários"** agora vale pro cargo **Equipe** inteiro — o time de vendas/estoque vê o "N querem" nas cartas sem precisar ser CTO.
 
 ## 1.19.0 — Da compra pro fichário · 09/09/2026
 
