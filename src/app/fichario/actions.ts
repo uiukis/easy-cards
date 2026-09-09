@@ -408,11 +408,11 @@ export async function updateCardVariant(cardId: string, variant: string | null) 
   revalidatePath("/fichario");
 }
 
-export async function updateCardSpan(cardId: string, spanCols: number) {
+export async function updateCardSpan(cardId: string, spanCols: number, spanRows = 1) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("binder_cards")
-    .update({ span_cols: spanCols })
+    .update({ span_cols: spanCols, span_rows: spanRows })
     .eq("id", cardId);
   if (error) throw new Error(error.message);
   revalidatePath("/fichario");

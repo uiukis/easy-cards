@@ -12,6 +12,8 @@ export type GuestCard = {
   types: string | null;
   is_image?: boolean;
   want?: boolean;
+  span_cols?: number;
+  span_rows?: number;
 };
 
 export type GuestBinder = {

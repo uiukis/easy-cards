@@ -168,7 +168,10 @@ export default async function SharedBinderPage({
                   {pc.map((card) => (
                     <div
                       key={card.id}
-                      style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
+                      style={{
+                        ...(card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : {}),
+                        ...(card.span_rows > 1 ? { gridRow: `span ${card.span_rows}` } : {}),
+                      }}
                       className={`relative aspect-[5/7] overflow-hidden rounded-lg border-2 bg-bg shadow-sm ${
                         card.want && !card.is_image
                           ? "border-dashed border-orange/70"

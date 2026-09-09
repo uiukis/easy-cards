@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -32,6 +32,7 @@ import {
   Image as ImageIcon,
   Bookmark,
   BookmarkCheck,
+  Move,
 } from "lucide-react";
 import type { Binder, BinderCard } from "@/lib/supabase/types";
 import { PRICES_ENABLED } from "@/lib/features";
@@ -162,6 +163,8 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const [showPrices, setShowPrices] = useState(true);
   const [sortKey, setSortKey] = useState("custom");
   const [shareOpen, setShareOpen] = useState(false);
@@ -440,6 +443,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         position: 0,
         variant: null,
         span_cols: 1,
+        span_rows: 1,
         rarity: c.rarity ?? null,
         types: c.types ?? null,
         is_image: false,
@@ -482,6 +486,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         position: 0,
         variant: null,
         span_cols: 1,
+        span_rows: 1,
         rarity: null,
         types: null,
         is_image: true,
@@ -553,16 +558,48 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     moveCard(sourceId, pageIndex * cardsPerPage + pc.length);
   }
 
+  // Tap-to-move — the touch-friendly path (native drag doesn't fire on phones).
+  function placePicked(targetCardId: string | null, pageIndex: number) {
+    const src = pickedId;
+    if (!src) return;
+    setPickedId(null);
+    if (targetCardId === src) return;
+    if (targetCardId) {
+      const to = cards.findIndex((c) => c.id === targetCardId);
+      if (to !== -1) moveCard(src, to);
+    } else {
+      const pc = pages[pageIndex] ?? [];
+      moveCard(src, pageIndex * cardsPerPage + pc.length);
+    }
+  }
+
   function handleVariantChange(cardId: string, variant: string) {
     const value = variant === "normal" ? null : variant;
     setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, variant: value } : c)));
     updateCardVariant(cardId, value);
   }
 
-  function handleToggleSpan(cardId: string, current: number) {
-    const next = current > 1 ? 1 : 2;
-    setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, span_cols: next } : c)));
-    updateCardSpan(cardId, next);
+  // cycle each slot 1×1 → 2×1 (largura) → 2×2 (toploader) → 1×1
+  function handleToggleSpan(cardId: string, cols: number, rows: number) {
+    let nextC = 1;
+    let nextR = 1;
+    if (cols <= 1 && rows <= 1) {
+      nextC = 2;
+    } else if (cols === 2 && rows <= 1) {
+      nextC = 2;
+      nextR = 2;
+    }
+    setCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, span_cols: nextC, span_rows: nextR } : c))
+    );
+    updateCardSpan(cardId, nextC, nextR);
+  }
+
+  function slotSpanStyle(card: BinderCard): CSSProperties | undefined {
+    const s: CSSProperties = {};
+    if (card.span_cols > 1) s.gridColumn = `span ${card.span_cols}`;
+    if (card.span_rows > 1) s.gridRow = `span ${card.span_rows}`;
+    return Object.keys(s).length ? s : undefined;
   }
 
   function toggleSelectMode() {
@@ -759,17 +796,27 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                 e.preventDefault();
                 handleDropOnCard(card.id);
               }}
-              onClick={() => selectMode && toggleCardSelected(card.id)}
-              style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
+              onClick={() => {
+                if (selectMode) {
+                  toggleCardSelected(card.id);
+                } else if (pickedId) {
+                  placePicked(card.id, pageIndex);
+                } else {
+                  setFocusedId((f) => (f === card.id ? null : card.id));
+                }
+              }}
+              style={slotSpanStyle(card)}
               className={`group relative aspect-[5/7] overflow-hidden rounded-lg border-2 bg-bg shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ${
-                selectMode ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
+                selectMode || pickedId ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
               } ${
-                selectedIds.has(card.id) || dragOverId === card.id
+                selectedIds.has(card.id) || dragOverId === card.id || pickedId === card.id
                   ? "border-orange-deep ring-2 ring-orange-deep"
-                  : card.want && !card.is_image
-                    ? "border-dashed border-orange/70"
-                    : "border-ink/10"
-              } ${draggedId === card.id ? "opacity-30" : ""}`}
+                  : pickedId
+                    ? "border-orange/40"
+                    : card.want && !card.is_image
+                      ? "border-dashed border-orange/70"
+                      : "border-ink/10"
+              } ${draggedId === card.id || pickedId === card.id ? "opacity-40" : ""}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
               <img
@@ -787,102 +834,137 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                 </span>
               )}
 
-              {selectMode ? (
-                <div
-                  className={`absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
-                    selectedIds.has(card.id)
-                      ? "border-orange-deep bg-orange-deep text-white"
-                      : "border-white/70 bg-black/40"
-                  }`}
-                >
-                  {selectedIds.has(card.id) && <Check className="h-3 w-3" />}
-                </div>
-              ) : card.is_image ? null : (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggleSpan(card.id, card.span_cols);
-                  }}
-                  aria-label={
-                    card.span_cols > 1 ? "Desfazer carta grande" : "Marcar como carta grande"
-                  }
-                  title={card.span_cols > 1 ? "Desfazer carta grande" : "Carta grande (2 espaços)"}
-                  className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100"
-                >
-                  {card.span_cols > 1 ? (
-                    <Minimize2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <Maximize2 className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              )}
+              {(() => {
+                const shown = focusedId === card.id;
+                const vis = shown ? "opacity-100" : "opacity-0 group-hover:opacity-100";
+                if (selectMode) {
+                  return (
+                    <div
+                      className={`absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 ${
+                        selectedIds.has(card.id)
+                          ? "border-orange-deep bg-orange-deep text-white"
+                          : "border-white/70 bg-black/40"
+                      }`}
+                    >
+                      {selectedIds.has(card.id) && <Check className="h-3 w-3" />}
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    <div className={`absolute left-1 top-1 flex gap-1 transition-opacity ${vis}`}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPickedId(card.id);
+                          setFocusedId(null);
+                        }}
+                        aria-label={`Mover ${card.name}`}
+                        title="Mover — depois toque no lugar"
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm"
+                      >
+                        <Move className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleSpan(card.id, card.span_cols, card.span_rows);
+                        }}
+                        aria-label="Mudar o tamanho do slot"
+                        title={
+                          card.span_cols > 1 && card.span_rows > 1
+                            ? "Toploader (2×2) — toque pra voltar ao normal"
+                            : card.span_cols > 1
+                              ? "Largura dupla — toque pra 2×2 (toploader)"
+                              : "Slot normal — toque pra largura dupla"
+                        }
+                        className="flex h-6 items-center gap-0.5 rounded-full bg-black/60 px-1.5 text-white backdrop-blur-sm"
+                      >
+                        {card.span_cols > 1 || card.span_rows > 1 ? (
+                          <Minimize2 className="h-3.5 w-3.5" />
+                        ) : (
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        )}
+                        {card.span_cols > 1 && (
+                          <span className="text-[9px] font-bold">
+                            {card.span_rows > 1 ? "2×2" : "2×1"}
+                          </span>
+                        )}
+                      </button>
+                    </div>
 
-              {!selectMode && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemove(card.id);
-                  }}
-                  disabled={removingId === card.id}
-                  aria-label={`Remover ${card.name}`}
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 disabled:opacity-100"
-                >
-                  {removingId === card.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemove(card.id);
+                      }}
+                      disabled={removingId === card.id}
+                      aria-label={`Remover ${card.name}`}
+                      className={`absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-sm transition-opacity disabled:opacity-100 ${vis}`}
+                    >
+                      {removingId === card.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
 
-              {PRICES_ENABLED && showPrices && (
-                <div className="absolute bottom-1 left-1">
-                  <PriceBadge name={card.name} cardNumber={card.card_number} />
-                </div>
-              )}
+                    {PRICES_ENABLED && showPrices && (
+                      <div className="absolute bottom-1 left-1">
+                        <PriceBadge name={card.name} cardNumber={card.card_number} />
+                      </div>
+                    )}
 
-              {!selectMode && !card.is_image && !PRICES_ENABLED && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggleWant(card.id, card.want);
-                  }}
-                  aria-label={card.want ? "Tenho essa carta" : "Quero essa carta"}
-                  title={card.want ? "Marcar como: Tenho" : "Marcar como: Quero"}
-                  className={`absolute bottom-1 left-1 flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold backdrop-blur-sm transition-opacity ${
-                    card.want
-                      ? "bg-orange-deep text-white"
-                      : "bg-black/60 text-white opacity-0 group-hover:opacity-100"
-                  }`}
-                >
-                  {card.want ? (
-                    <BookmarkCheck className="h-2.5 w-2.5" />
-                  ) : (
-                    <Bookmark className="h-2.5 w-2.5" />
-                  )}
-                  {card.want ? "Quero" : "Tenho"}
-                </button>
-              )}
+                    {!card.is_image && !PRICES_ENABLED && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleWant(card.id, card.want);
+                        }}
+                        aria-label={card.want ? "Tenho essa carta" : "Quero essa carta"}
+                        title={card.want ? "Marcar como: Tenho" : "Marcar como: Quero"}
+                        className={`absolute bottom-1 left-1 flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold backdrop-blur-sm transition-opacity ${
+                          card.want
+                            ? "bg-orange-deep text-white"
+                            : `bg-black/60 text-white ${vis}`
+                        }`}
+                      >
+                        {card.want ? (
+                          <BookmarkCheck className="h-2.5 w-2.5" />
+                        ) : (
+                          <Bookmark className="h-2.5 w-2.5" />
+                        )}
+                        {card.want ? "Quero" : "Tenho"}
+                      </button>
+                    )}
 
-              {!selectMode && !card.is_image && (
-                <div onClick={(e) => e.stopPropagation()} className="absolute bottom-1 right-1">
-                  <Select
-                    value={card.variant ?? "normal"}
-                    onValueChange={(v) => v && handleVariantChange(card.id, v)}
-                  >
-                    <SelectTrigger className="h-5 min-w-0 gap-0.5 rounded-full border-0 bg-black/60 px-1.5 py-0 text-[9px] font-bold text-white backdrop-blur-sm [&_svg]:h-2.5 [&_svg]:w-2.5">
-                      <SelectValue>{(v: string) => VARIANT_ABBR[v] || "···"}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(VARIANT_LABEL).map(([key, lbl]) => (
-                        <SelectItem key={key} value={key}>
-                          {lbl}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+                    {!card.is_image && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className={`absolute bottom-1 right-1 transition-opacity ${
+                          card.variant ? "opacity-100" : vis
+                        }`}
+                      >
+                        <Select
+                          value={card.variant ?? "normal"}
+                          onValueChange={(v) => v && handleVariantChange(card.id, v)}
+                        >
+                          <SelectTrigger className="h-5 min-w-0 gap-0.5 rounded-full border-0 bg-black/60 px-1.5 py-0 text-[9px] font-bold text-white backdrop-blur-sm [&_svg]:h-2.5 [&_svg]:w-2.5">
+                            <SelectValue>{(v: string) => VARIANT_ABBR[v] || "···"}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(VARIANT_LABEL).map(([key, lbl]) => (
+                              <SelectItem key={key} value={key}>
+                                {lbl}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           ))}
 
@@ -902,11 +984,18 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                   e.preventDefault();
                   handleDropOnEmpty(pageIndex);
                 }}
+                onClick={() => pickedId && firstEmpty && placePicked(null, pageIndex)}
                 className={`group/slot relative flex aspect-[5/7] items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
-                  dragOverId === slotKey ? "border-orange-deep bg-orange/10" : "border-ink/10"
-                }`}
+                  dragOverId === slotKey || (pickedId && firstEmpty)
+                    ? "border-orange-deep bg-orange/10"
+                    : "border-ink/10"
+                } ${pickedId && firstEmpty ? "cursor-pointer" : ""}`}
               >
-                {uploadingSlot === pageIndex && firstEmpty ? (
+                {pickedId && firstEmpty ? (
+                  <span className="px-2 text-center text-[10px] font-bold text-orange-deep">
+                    toque pra soltar aqui
+                  </span>
+                ) : uploadingSlot === pageIndex && firstEmpty ? (
                   <Loader2 className="h-4 w-4 animate-spin text-ink-muted" />
                 ) : (
                   <div className="flex flex-col items-center gap-1 opacity-0 transition-opacity group-hover/slot:opacity-100">
@@ -1271,7 +1360,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                   {pc.map((card) => (
                   <div
                     key={card.id}
-                    style={card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : undefined}
+                    style={slotSpanStyle(card)}
                     className={`relative aspect-[5/7] overflow-hidden rounded-lg border border-ink/20 ${
                       card.want && !card.is_image ? "opacity-60" : ""
                     }`}
@@ -1294,6 +1383,20 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
             ))}
           </div>
         </>
+      )}
+
+      {pickedId && (
+        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 print:hidden">
+          <div className="flex items-center gap-3 rounded-full border-2 border-orange-deep bg-surface px-4 py-2.5 shadow-xl">
+            <span className="flex items-center gap-1.5 text-sm font-bold text-ink">
+              <Move className="h-4 w-4 text-orange-deep" />
+              Toque no lugar onde quer colocar
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setPickedId(null)}>
+              Cancelar
+            </Button>
+          </div>
+        </div>
       )}
 
       {selectMode && selectedIds.size > 0 && (
