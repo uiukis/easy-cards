@@ -1,9 +1,15 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.24.0**.
+Datas no fuso de Brasília. Versão atual: **1.25.0**.
 
 ---
+
+## 1.25.0 — Rolagem suave + parallax · 09/09/2026
+
+- **Scroll suave** nas páginas públicas — aquela rolagem com inércia.
+- **Parallax no topo** — o sol, as cartas do fundo e as flutuantes se movem em velocidades diferentes quando você rola, e o conteúdo some suave.
+- Seções aparecem quando entram na tela, com um leve overshoot.
 
 ## 1.24.0 — Brilho holográfico ✨ · 09/09/2026
 
