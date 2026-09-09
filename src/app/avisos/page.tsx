@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Bell, Sparkles, ShieldCheck, CircleDollarSign } from "lucide-react";
+import { Bell, Sparkles, ShieldCheck, CircleDollarSign, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Notification } from "@/lib/supabase/types";
 import { CustomerNav } from "@/components/CustomerNav";
@@ -11,6 +11,7 @@ const ICON: Record<Notification["kind"], typeof Bell> = {
   purchase_confirm: CircleDollarSign,
   dispute: ShieldCheck,
   info: Bell,
+  binder_social: Heart,
 };
 
 function timeAgo(iso: string) {

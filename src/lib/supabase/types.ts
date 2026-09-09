@@ -18,7 +18,7 @@ export type Profile = {
 export type Notification = {
   id: string;
   user_id: string;
-  kind: "wishlist_match" | "purchase_confirm" | "dispute" | "info";
+  kind: "wishlist_match" | "purchase_confirm" | "dispute" | "info" | "binder_social";
   title: string;
   body: string | null;
   link: string | null;
