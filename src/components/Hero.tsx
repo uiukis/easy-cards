@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { motion } from "motion/react";
+import { motion, useScroll, useTransform } from "motion/react";
 import { WalletCards, GraduationCap, Gavel } from "lucide-react";
 import { SITE } from "@/lib/site";
 import { FloatingCard } from "./FloatingCard";
@@ -42,6 +42,19 @@ const BG_CARD_SLOTS = [
 export function Hero() {
   const [cardImages, setCardImages] = useState<string[]>([]);
   const [bgCards, setBgCards] = useState<string[]>([]);
+  const ref = useRef<HTMLElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start start", "end start"],
+  });
+  // parallax: each layer drifts at its own rate as the hero scrolls away
+  const sunburstY = useTransform(scrollYProgress, [0, 1], [0, 160]);
+  const sunburstScale = useTransform(scrollYProgress, [0, 1], [1, 1.25]);
+  const bgCardsY = useTransform(scrollYProgress, [0, 1], [0, -110]);
+  const floatY = useTransform(scrollYProgress, [0, 1], [0, 90]);
+  const contentY = useTransform(scrollYProgress, [0, 1], [0, 40]);
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.75], [1, 0]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -51,23 +64,30 @@ export function Hero() {
   }, []);
 
   return (
-    <section id="top" className="relative overflow-hidden pt-16 pb-16 sm:pt-20">
+    <section
+      ref={ref}
+      id="top"
+      className="relative overflow-hidden pt-16 pb-16 sm:pt-20"
+    >
       {/* full-bleed animated comic background: rays behind everything, dots on top */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.4 }}
-        animate={{ opacity: 0.8, scale: 1 }}
-        transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[820px] w-[820px] -translate-x-1/2 -translate-y-1/2"
-      >
-        <Sunburst />
-      </motion.div>
+      <div className="pointer-events-none absolute left-1/2 top-1/2 h-[820px] w-[820px] -translate-x-1/2 -translate-y-1/2">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.4 }}
+          animate={{ opacity: 0.8, scale: 1 }}
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          style={{ y: sunburstY, scale: sunburstScale }}
+          className="h-full w-full"
+        >
+          <Sunburst />
+        </motion.div>
+      </div>
       <div className="bg-halftone pointer-events-none absolute inset-0 opacity-60" />
 
       {/* faded, stacked card art peeking through behind the headline.
           The group itself is faded as one flattened layer (opacity here
           creates a stacking context), so the cards stay fully opaque
           against each other and occlude properly instead of blending. */}
-      <div className="pointer-events-none absolute inset-0 opacity-40">
+      <motion.div style={{ y: bgCardsY }} className="pointer-events-none absolute inset-0 opacity-40">
         {BG_CARD_SLOTS.map((slot, i) =>
           bgCards[i] ? (
             <motion.img
@@ -83,10 +103,13 @@ export function Hero() {
             />
           ) : null
         )}
-      </div>
+      </motion.div>
 
       {/* floating decorative cards, hidden on small screens to keep things tidy */}
-      <div className="pointer-events-none absolute inset-0 z-20 hidden lg:block">
+      <motion.div
+        style={{ y: floatY }}
+        className="pointer-events-none absolute inset-0 z-20 hidden lg:block"
+      >
         {CARD_SLOTS.map((slot, i) => (
           <div key={slot.pos} className={`pointer-events-auto absolute ${slot.pos}`}>
             <FloatingCard
@@ -98,9 +121,12 @@ export function Hero() {
             />
           </div>
         ))}
-      </div>
+      </motion.div>
 
-      <div className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-5 text-center sm:px-8">
+      <motion.div
+        style={{ y: contentY, opacity: contentOpacity }}
+        className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-5 text-center sm:px-8"
+      >
         <motion.div
           initial={{ opacity: 0, y: -10, rotate: -6 }}
           animate={{ opacity: 1, y: 0, rotate: -4 }}
@@ -180,7 +206,7 @@ export function Hero() {
             Ver no Instagram
           </a>
         </motion.div>
-      </div>
+      </motion.div>
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}

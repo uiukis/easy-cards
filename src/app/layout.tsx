@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { themeInitScript } from "@/lib/theme-store";
 import { cn } from "@/lib/utils";
+import { SmoothScroll } from "@/components/SmoothScroll";
 
 const luckiestGuy = Luckiest_Guy({
   variable: "--font-luckiest",
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="min-h-full flex flex-col bg-bg text-ink font-sans">
+        <SmoothScroll />
         {children}
         <Analytics />
       </body>
