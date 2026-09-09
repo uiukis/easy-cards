@@ -19,6 +19,7 @@ import {
   BookOpen,
   Sparkles,
   Gavel,
+  Home,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,7 @@ const ICONS: Record<string, LucideIcon> = {
   BookOpen,
   Sparkles,
   Gavel,
+  Home,
 };
 
 export type AdminNavItem = {

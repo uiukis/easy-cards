@@ -5,6 +5,7 @@ import { About } from "@/components/About";
 import { EventsSection } from "@/components/EventsSection";
 import { AuctionsSection } from "@/components/AuctionsSection";
 import { ToolsSection } from "@/components/ToolsSection";
+import { CardOfWeekSection, type CardOfWeek } from "@/components/CardOfWeekSection";
 import { GradedShowcase } from "@/components/GradedShowcase";
 import { SupportSection } from "@/components/SupportSection";
 import { SupportersStrip } from "@/components/SupportersStrip";
@@ -37,6 +38,17 @@ export default async function Home() {
     supabase.from("auctions").select("*").eq("featured", true).maybeSingle(),
   ]);
 
+  const [{ data: cardOfWeek }, { data: statsData }] = await Promise.all([
+    supabase.from("site_settings").select("value").eq("key", "card_of_week").maybeSingle(),
+    supabase.rpc("community_stats"),
+  ]);
+  const stats = (statsData ?? {
+    binders: 0,
+    cardsInBinders: 0,
+    wishlistCards: 0,
+    auctions: 0,
+  }) as { binders: number; cardsInBinders: number; wishlistCards: number; auctions: number };
+
   return (
     <>
       <EventBanner />
@@ -45,6 +57,10 @@ export default async function Home() {
         <Hero />
         <About />
         <ToolsSection />
+        <CardOfWeekSection
+          card={(cardOfWeek?.value ?? null) as CardOfWeek | null}
+          stats={stats}
+        />
         <EventsSection />
         <PressSection mentions={pressMentions ?? []} />
         <AuctionsSection featured={featuredAuction ?? null} />

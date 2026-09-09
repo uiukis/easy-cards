@@ -12,6 +12,7 @@ const NAV: (AdminNavItem & { permission?: PermissionKey; ctoOnly?: boolean })[] 
   { href: "/admin/financeiro", label: "Financeiro", icon: "HandCoins", permission: "view_finance" },
   { href: "/admin/desejos", label: "Desejos", icon: "Sparkles", permission: "view_wishlists" },
   { href: "/admin/quadro", label: "Quadro", icon: "Megaphone", permission: "manage_quadro" },
+  { href: "/admin/home", label: "Página inicial", icon: "Home", permission: "manage_quadro" },
   { href: "/admin/usuarios", label: "Usuários", icon: "Users", permission: "manage_users" },
   { href: "/admin/permissoes", label: "Permissões", icon: "Lock", ctoOnly: true },
   { href: "/admin/perfil", label: "Meu perfil", icon: "UserCog" },
