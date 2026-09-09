@@ -11,6 +11,55 @@ function refresh() {
   revalidatePath("/imprensa");
 }
 
+export async function createFounder(input: {
+  name: string;
+  role: string;
+  instagram: string;
+  image_url: string;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("founders").insert({
+    name: input.name,
+    role: input.role || "",
+    instagram: input.instagram || null,
+    image_url: input.image_url || null,
+  });
+  if (error) throw new Error(error.message);
+  refresh();
+}
+
+export async function updateFounder(
+  id: string,
+  input: { name: string; role: string; instagram: string; image_url: string }
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("founders")
+    .update({
+      name: input.name,
+      role: input.role || "",
+      instagram: input.instagram || null,
+      image_url: input.image_url || null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  refresh();
+}
+
+export async function toggleFounder(id: string, active: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("founders").update({ active }).eq("id", id);
+  if (error) throw new Error(error.message);
+  refresh();
+}
+
+export async function deleteFounder(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("founders").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  refresh();
+}
+
 export async function createSupporter(input: {
   name: string;
   instagram: string;

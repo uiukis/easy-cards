@@ -16,7 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
   const supabase = await createClient();
-  const [{ data: pressMentions }, { data: supporters }] = await Promise.all([
+  const [{ data: pressMentions }, { data: supporters }, { data: founders }] = await Promise.all([
     supabase
       .from("press_mentions")
       .select("*")
@@ -24,6 +24,11 @@ export default async function Home() {
       .order("published_date", { ascending: false }),
     supabase
       .from("supporters")
+      .select("*")
+      .eq("active", true)
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("founders")
       .select("*")
       .eq("active", true)
       .order("sort_order", { ascending: true }),
@@ -43,7 +48,7 @@ export default async function Home() {
         <SupportSection />
         <SupportersStrip supporters={supporters ?? []} />
         <Community />
-        <Founders />
+        <Founders founders={founders ?? []} />
       </main>
       <Footer />
       <JoinModal />

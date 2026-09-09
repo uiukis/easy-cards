@@ -51,6 +51,17 @@ export type Supporter = {
   created_at: string;
 };
 
+export type Founder = {
+  id: string;
+  name: string;
+  role: string;
+  instagram: string | null;
+  image_url: string | null;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
 export type PressMention = {
   id: string;
   title: string;

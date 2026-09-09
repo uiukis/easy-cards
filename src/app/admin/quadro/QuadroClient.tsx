@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Handshake, Newspaper, Plus, Trash2, Eye, Pencil, X } from "lucide-react";
-import type { Supporter, PressMention } from "@/lib/supabase/types";
+import { Handshake, Newspaper, Users, Plus, Trash2, Eye, Pencil, X } from "lucide-react";
+import type { Supporter, PressMention, Founder } from "@/lib/supabase/types";
 import {
   createSupporter,
   updateSupporter,
@@ -13,6 +13,10 @@ import {
   updatePressMention,
   togglePressMention,
   deletePressMention,
+  createFounder,
+  updateFounder,
+  toggleFounder,
+  deleteFounder,
 } from "./actions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { PressCard } from "@/components/PressSection";
@@ -40,13 +44,15 @@ function PreviewFrame({ children }: { children: React.ReactNode }) {
 export function QuadroClient({
   initialSupporters,
   initialPressMentions,
+  initialFounders,
 }: {
   initialSupporters: Supporter[];
   initialPressMentions: PressMention[];
+  initialFounders: Founder[];
 }) {
   return (
     <div>
-      <AdminPageHeader title="QUADRO" subtitle="Apoiadores e imprensa visíveis no site." />
+      <AdminPageHeader title="QUADRO" subtitle="Time, apoiadores e imprensa visíveis no site." />
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -61,6 +67,9 @@ export function QuadroClient({
             <TabsTrigger value="imprensa">
               <Newspaper className="h-4 w-4" /> Imprensa
             </TabsTrigger>
+            <TabsTrigger value="fundadores">
+              <Users className="h-4 w-4" /> Time
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="apoiadores" className="mt-4">
@@ -68,6 +77,9 @@ export function QuadroClient({
           </TabsContent>
           <TabsContent value="imprensa" className="mt-4">
             <ImprensaTab initial={initialPressMentions} />
+          </TabsContent>
+          <TabsContent value="fundadores" className="mt-4">
+            <FundadoresTab initial={initialFounders} />
           </TabsContent>
         </Tabs>
       </motion.div>
@@ -531,6 +543,222 @@ function ImprensaTab({ initial }: { initial: PressMention[] }) {
               As 3 mais recentes aparecem na home; todas em{" "}
               <span className="font-semibold">/imprensa</span>.
             </p>
+          </div>
+        )}
+      </PreviewFrame>
+    </div>
+  );
+}
+
+function FundadoresTab({ initial }: { initial: Founder[] }) {
+  const [items, setItems] = useState(initial);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [instagram, setInstagram] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function resetForm() {
+    setEditingId(null);
+    setName("");
+    setRole("");
+    setInstagram("");
+    setImageUrl("");
+  }
+
+  function startEdit(f: Founder) {
+    setEditingId(f.id);
+    setName(f.name);
+    setRole(f.role);
+    setInstagram(f.instagram ?? "");
+    setImageUrl(f.image_url ?? "");
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setSaving(true);
+    if (editingId) {
+      await updateFounder(editingId, { name, role, instagram, image_url: imageUrl });
+      setItems((prev) =>
+        prev.map((x) =>
+          x.id === editingId
+            ? { ...x, name, role, instagram: instagram || null, image_url: imageUrl || null }
+            : x
+        )
+      );
+    } else {
+      await createFounder({ name, role, instagram, image_url: imageUrl });
+      setItems((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          name,
+          role,
+          instagram: instagram || null,
+          image_url: imageUrl || null,
+          active: true,
+          sort_order: prev.length + 1,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+    }
+    resetForm();
+    setSaving(false);
+  }
+
+  const active = items.filter((f) => f.active);
+
+  return (
+    <div className="space-y-6">
+      <div className="max-w-lg space-y-4">
+        <Card>
+          <CardContent>
+            {editingId && (
+              <p className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-wide text-orange-deep">
+                Editando membro
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex items-center gap-1 text-ink-muted hover:text-ink"
+                >
+                  <X className="h-3.5 w-3.5" /> cancelar
+                </button>
+              </p>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-2">
+              <Input placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} />
+              <Input
+                placeholder="Cargo (ex: CEO, Mídias)"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              />
+              <Input
+                placeholder="Instagram (URL)"
+                value={instagram}
+                onChange={(e) => setInstagram(e.target.value)}
+              />
+              <ImageUploadField value={imageUrl} onChange={setImageUrl} shape="circle" />
+              <Button type="submit" disabled={saving}>
+                <Plus className="h-4 w-4" /> {editingId ? "Salvar alterações" : "Adicionar"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div>
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ink-muted">
+            {items.length} {items.length === 1 ? "pessoa" : "pessoas"}
+          </p>
+          {items.length === 0 ? (
+            <p className="rounded-xl border-2 border-dashed border-ink/15 px-4 py-6 text-center text-sm text-ink-muted">
+              Ninguém cadastrado ainda.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {items.map((f) => (
+                <li key={f.id}>
+                  <Card>
+                    <CardContent className="flex items-center justify-between gap-3">
+                      <div className={`flex items-center gap-3 ${f.active ? "" : "opacity-50"}`}>
+                        {f.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
+                          <img
+                            src={f.image_url}
+                            alt={f.name}
+                            className="h-10 w-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-alt font-display text-sm text-orange-deep">
+                            {f.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-semibold text-ink">{f.name}</p>
+                          <p className="text-xs text-ink-muted">
+                            {f.role}
+                            {!f.active && " · oculto no site"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            await toggleFounder(f.id, !f.active);
+                            setItems((prev) =>
+                              prev.map((x) => (x.id === f.id ? { ...x, active: !x.active } : x))
+                            );
+                          }}
+                        >
+                          {f.active ? "ocultar" : "mostrar"}
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" onClick={() => startEdit(f)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={async () => {
+                            await deleteFounder(f.id);
+                            setItems((prev) => prev.filter((x) => x.id !== f.id));
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      <PreviewFrame>
+        {active.length === 0 ? (
+          <p className="py-4 text-center text-sm text-ink-muted">
+            A seção “Gente que também coleciona” some enquanto não tiver ninguém ativo.
+          </p>
+        ) : (
+          <div>
+            <span className="font-comic text-sm tracking-wide text-orange-deep">★ Quem tá por trás</span>
+            <h3 className="mt-2 font-display text-2xl leading-tight text-ink">
+              GENTE QUE TAMBÉM COLECIONA.
+            </h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {active.map((f) => (
+                <div
+                  key={f.id}
+                  className="flex items-center gap-3 rounded-2xl border-2 border-ink/10 bg-surface p-3"
+                >
+                  {f.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
+                    <img
+                      src={f.image_url}
+                      alt={f.name}
+                      className="h-12 w-12 shrink-0 rounded-full border-2 border-ink/10 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-ink/10 bg-surface-alt font-display text-orange-deep">
+                      {f.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-display text-sm tracking-wide text-ink">
+                      {f.name.toUpperCase()}
+                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-orange-deep">
+                      {f.role}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </PreviewFrame>
