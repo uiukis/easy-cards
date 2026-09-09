@@ -20,14 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -97,84 +89,92 @@ export function CartasClient({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
-        className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
+        className="mt-6"
+      >
         {cards.length === 0 ? (
-          <p className="p-6 text-sm text-ink-muted">Nenhuma carta cadastrada ainda.</p>
+          <p className="rounded-2xl border border-border bg-surface p-6 text-sm text-ink-muted">
+            Nenhuma carta cadastrada ainda.
+          </p>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Carta</TableHead>
-                <TableHead>Condição</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {cards.map((card) => (
-                <TableRow key={card.id}>
-                  <TableCell className="flex items-center gap-3">
-                    {card.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs, not worth whitelisting every hostname
-                      <img
-                        src={card.image_url}
-                        alt={card.name}
-                        width={32}
-                        height={44}
-                        className="h-11 w-8 rounded-sm object-cover"
-                      />
-                    ) : (
-                      <div className="h-11 w-8 rounded-sm bg-surface-alt" />
-                    )}
-                    <div>
-                      <p className="font-semibold text-ink">
-                        {card.name}
-                        {card.card_number && (
-                          <span className="ml-1 font-normal text-ink-muted">
-                            ({card.card_number})
-                          </span>
-                        )}
-                      </p>
-                      {card.set_name && <p className="text-xs text-ink-muted">{card.set_name}</p>}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-ink-muted">{card.condition || "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[card.status]}>{STATUS_LABEL[card.status]}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      {canViewFinance && (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => setFinanceFor(card)}
-                          title="Financeiro"
-                        >
-                          <HandCoins className="h-4 w-4" />
-                        </Button>
+          <ul className="space-y-2.5">
+            {cards.map((card) => {
+              const fin = financeByCardId[card.id];
+              return (
+                <li
+                  key={card.id}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-border bg-surface p-3 sm:flex-nowrap"
+                >
+                  {card.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- arbitrary admin-provided URLs
+                    <img
+                      src={card.image_url}
+                      alt={card.name}
+                      className="h-14 w-10 shrink-0 rounded-sm object-cover"
+                    />
+                  ) : (
+                    <div className="h-14 w-10 shrink-0 rounded-sm bg-surface-alt" />
+                  )}
+
+                  <div className="min-w-0 flex-1 basis-40">
+                    <p className="truncate text-sm font-semibold text-ink">
+                      {card.name}
+                      {card.card_number && (
+                        <span className="ml-1 font-normal text-ink-muted">({card.card_number})</span>
                       )}
-                      <Button variant="ghost" size="icon-sm" onClick={() => setEditing(card)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                    </p>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+                      {card.set_name && <span className="truncate">{card.set_name}</span>}
+                      {card.condition && (
+                        <span className="rounded bg-surface-alt px-1.5 py-0.5 font-semibold">
+                          {card.condition}
+                        </span>
+                      )}
+                      {canViewFinance && fin?.final_price != null && (
+                        <span className="font-semibold text-primary">
+                          R$ {Number(fin.final_price).toFixed(2)}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  <Badge
+                    variant={STATUS_VARIANT[card.status]}
+                    className="order-last shrink-0 sm:order-none"
+                  >
+                    {STATUS_LABEL[card.status]}
+                  </Badge>
+
+                  <div className="ml-auto flex shrink-0 items-center gap-0.5">
+                    {canViewFinance && (
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        onClick={() => setConfirmDeleteId(card.id)}
-                        disabled={deletingId === card.id}
+                        onClick={() => setFinanceFor(card)}
+                        title="Financeiro"
                       >
-                        {deletingId === card.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
-                        )}
+                        <HandCoins className="h-4 w-4" />
                       </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    )}
+                    <Button variant="ghost" size="icon-sm" onClick={() => setEditing(card)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setConfirmDeleteId(card.id)}
+                      disabled={deletingId === card.id}
+                    >
+                      {deletingId === card.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </motion.div>
 

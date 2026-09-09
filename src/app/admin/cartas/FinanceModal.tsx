@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Loader2, HandCoins } from "lucide-react";
 import type { Card, CardFinance } from "@/lib/supabase/types";
 import { upsertCardFinance } from "./financeActions";
+import { maskBRL, brlFromNumber, brlToPlain } from "@/lib/money";
 import { BuyerPicker } from "./BuyerPicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,11 +41,11 @@ export function FinanceModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [finalPrice, setFinalPrice] = useState(finance?.final_price?.toString() ?? "");
+  const [finalPrice, setFinalPrice] = useState(brlFromNumber(finance?.final_price));
   const [buyerId, setBuyerId] = useState<string | null>(finance?.buyer_id ?? null);
   const [buyerName, setBuyerName] = useState(finance?.buyer_name ?? "");
   const [deliveryMethod, setDeliveryMethod] = useState(finance?.delivery_method ?? "none");
-  const [dominariaFee, setDominariaFee] = useState(finance?.dominaria_fee?.toString() ?? "");
+  const [dominariaFee, setDominariaFee] = useState(brlFromNumber(finance?.dominaria_fee));
   const [notes, setNotes] = useState(finance?.notes ?? "");
   const [markSold, setMarkSold] = useState(!!finance?.sold_at);
   const [soldDate, setSoldDate] = useState(finance?.sold_at?.slice(0, 10) ?? todayISO());
@@ -57,11 +58,11 @@ export function FinanceModal({
     setError(null);
     try {
       await upsertCardFinance(card.id, {
-        final_price: finalPrice,
+        final_price: brlToPlain(finalPrice),
         buyer_id: buyerId,
         buyer_name: buyerName,
         delivery_method: deliveryMethod === "none" ? "" : deliveryMethod,
-        dominaria_fee: dominariaFee,
+        dominaria_fee: brlToPlain(dominariaFee),
         notes,
         mark_sold: markSold,
         sold_date: soldDate,
@@ -87,10 +88,10 @@ export function FinanceModal({
           <div className="space-y-1.5">
             <Label>Preço da carta</Label>
             <Input
-              type="number"
-              step="0.01"
+              inputMode="numeric"
+              placeholder="R$ 0,00"
               value={finalPrice}
-              onChange={(e) => setFinalPrice(e.target.value)}
+              onChange={(e) => setFinalPrice(maskBRL(e.target.value))}
             />
           </div>
 
@@ -126,11 +127,11 @@ export function FinanceModal({
                 Taxa do envelope de depósito da Dominaria (não entra no valor da carta)
               </Label>
               <Input
-                type="number"
-                step="0.01"
+                inputMode="numeric"
+                placeholder="R$ 0,00"
                 className="border-primary/40"
                 value={dominariaFee}
-                onChange={(e) => setDominariaFee(e.target.value)}
+                onChange={(e) => setDominariaFee(maskBRL(e.target.value))}
               />
             </div>
           )}
