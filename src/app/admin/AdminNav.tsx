@@ -20,6 +20,7 @@ import {
   Sparkles,
   Gavel,
   Home,
+  Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ const ICONS: Record<string, LucideIcon> = {
   Sparkles,
   Gavel,
   Home,
+  Bell,
 };
 
 export type AdminNavItem = {
@@ -61,15 +63,18 @@ function NavLinks({
   items,
   isActive,
   onNavigate,
+  activityCount = 0,
 }: {
   items: AdminNavItem[];
   isActive: (href: string) => boolean;
   onNavigate?: () => void;
+  activityCount?: number;
 }) {
   return (
     <>
       {items.map((item) => {
         const Icon = ICONS[item.icon];
+        const badge = item.href === "/admin/atividade" && activityCount > 0 ? activityCount : null;
         return (
           <Link
             key={item.href}
@@ -83,6 +88,11 @@ function NavLinks({
           >
             <Icon className="h-4 w-4 shrink-0" />
             {item.label}
+            {badge && (
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-deep px-1 text-[10px] font-bold text-white">
+                {badge > 9 ? "9+" : badge}
+              </span>
+            )}
             {item.beta && (
               <Badge variant="secondary" className="ml-auto font-comic text-[10px] tracking-wide">
                 beta
@@ -130,12 +140,14 @@ export function AdminNav({
   roleLabel,
   version,
   avatarSprite,
+  activityCount = 0,
 }: {
   items: AdminNavItem[];
   fullName: string;
   roleLabel: string;
   version: string;
   avatarSprite: string | null;
+  activityCount?: number;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -158,6 +170,18 @@ export function AdminNav({
           <Wordmark />
         </Link>
         <div className="flex items-center gap-2">
+          <Link
+            href="/admin/atividade"
+            aria-label="Atividade"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-ink/10 bg-surface text-ink"
+          >
+            <Bell className="h-4 w-4" />
+            {activityCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-deep px-1 text-[10px] font-bold text-white">
+                {activityCount > 9 ? "9+" : activityCount}
+              </span>
+            )}
+          </Link>
           <ThemeToggle />
           <button
             onClick={() => setOpen(true)}
@@ -199,7 +223,7 @@ export function AdminNav({
               </div>
 
               <nav className="mt-4 flex-1 space-y-1">
-                <NavLinks items={items} isActive={isActive} onNavigate={() => setOpen(false)} />
+                <NavLinks items={items} isActive={isActive} activityCount={activityCount} onNavigate={() => setOpen(false)} />
               </nav>
 
               <Footer fullName={fullName} roleLabel={roleLabel} version={version} avatarSprite={avatarSprite} />
@@ -222,7 +246,7 @@ export function AdminNav({
         </Link>
 
         <nav className="flex-1 space-y-1">
-          <NavLinks items={items} isActive={isActive} />
+          <NavLinks items={items} isActive={isActive} activityCount={activityCount} />
         </nav>
 
         <Footer fullName={fullName} roleLabel={roleLabel} version={version} avatarSprite={avatarSprite} />

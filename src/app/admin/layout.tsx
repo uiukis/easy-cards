@@ -7,6 +7,7 @@ import packageJson from "../../../package.json";
 
 const NAV: (AdminNavItem & { permission?: PermissionKey; ctoOnly?: boolean })[] = [
   { href: "/admin", label: "Painel", icon: "LayoutDashboard" },
+  { href: "/admin/atividade", label: "Atividade", icon: "Bell" },
   { href: "/admin/cartas", label: "Cartas", icon: "CreditCard", permission: "manage_cards" },
   { href: "/admin/leiloes", label: "Leilões", icon: "Gavel", permission: "manage_auctions" },
   { href: "/admin/financeiro", label: "Financeiro", icon: "HandCoins", permission: "view_finance" },
@@ -50,6 +51,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return true;
   });
 
+  const { count: openActivity } = await supabase
+    .from("admin_activity")
+    .select("*", { count: "exact", head: true })
+    .is("resolved_at", null);
+
   return (
     <div className="flex min-h-screen flex-col bg-bg md:flex-row">
       <AdminNav
@@ -58,6 +64,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         roleLabel={roleLabel}
         version={packageJson.version}
         avatarSprite={profile.favorite_pokemon_sprite}
+        activityCount={openActivity ?? 0}
       />
 
       <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 md:px-10 print:p-0">{children}</main>
