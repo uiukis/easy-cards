@@ -1,9 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Plus, Pencil, Trash2, Loader2, HandCoins, ArrowLeft, ImageOff } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  HandCoins,
+  ArrowLeft,
+  ImageOff,
+  Search,
+  Download,
+  X,
+} from "lucide-react";
 import type { Card, CardFinance } from "@/lib/supabase/types";
+import { toCsv, downloadCsv } from "@/lib/csv";
 import { createCard, updateCard, deleteCard, type CardInput } from "./actions";
 import { CardSearch, type SearchResult } from "./CardSearch";
 import { FinanceModal } from "./FinanceModal";
@@ -64,12 +76,79 @@ export function CartasClient({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  const [q, setQ] = useState("");
+  const [statusF, setStatusF] = useState("all");
+  const [payF, setPayF] = useState("all");
+
   async function handleDelete(id: string) {
     setDeletingId(id);
     await deleteCard(id);
     setCards((prev) => prev.filter((c) => c.id !== id));
     setDeletingId(null);
     setConfirmDeleteId(null);
+  }
+
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return cards.filter((c) => {
+      if (term && !`${c.name} ${c.set_name ?? ""} ${c.card_number ?? ""}`.toLowerCase().includes(term))
+        return false;
+      if (statusF !== "all" && c.status !== statusF) return false;
+      if (payF !== "all") {
+        const fin = financeByCardId[c.id];
+        if (payF === "paid" && !fin?.paid_at) return false;
+        if (payF === "unpaid" && (fin?.paid_at || c.status !== "sold")) return false;
+        if (payF === "domi_pending" && !(fin?.delivery_method === "dominaria" && !fin.dominaria_deposited_at))
+          return false;
+      }
+      return true;
+    });
+  }, [cards, q, statusF, payF, financeByCardId]);
+
+  const activeFilters = (statusF !== "all" ? 1 : 0) + (payF !== "all" ? 1 : 0) + (q.trim() ? 1 : 0);
+
+  function handleExport() {
+    const header = [
+      "Carta",
+      "Número",
+      "Set",
+      "Condição",
+      "Status",
+      "Preço",
+      "Comprador",
+      "Entrega",
+      "Taxa Dominaria",
+      "Depositado na Domi",
+      "Pago",
+      "Pago em",
+      "Vendido em",
+      "Observações",
+    ];
+    const rows = filtered.map((c) => {
+      const f = financeByCardId[c.id];
+      const money = (n: number | null | undefined) =>
+        n == null ? "" : Number(n).toFixed(2).replace(".", ",");
+      const date = (d: string | null | undefined) =>
+        d ? new Date(d).toLocaleDateString("pt-BR") : "";
+      return [
+        c.name,
+        c.card_number ?? "",
+        c.set_name ?? "",
+        c.condition ?? "",
+        STATUS_LABEL[c.status],
+        money(f?.final_price),
+        f?.buyer_name ?? "",
+        f?.delivery_method === "dominaria" ? "Dominaria" : f?.delivery_method === "maos" ? "Em mãos" : "",
+        money(f?.dominaria_fee),
+        date(f?.dominaria_deposited_at),
+        f?.paid_at ? "Sim" : c.status === "sold" ? "Não" : "",
+        date(f?.paid_at),
+        date(f?.sold_at),
+        (f?.notes ?? "").replace(/\r?\n/g, " "),
+      ];
+    });
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadCsv(`easycards-cartas-${stamp}.csv`, toCsv([header, ...rows]));
   }
 
   return (
@@ -85,19 +164,87 @@ export function CartasClient({
         }
       />
 
+      {cards.length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[160px] flex-1">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-muted" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar carta…"
+              className="h-9 pl-8 text-sm"
+            />
+          </div>
+          <Select value={statusF} onValueChange={(v) => v && setStatusF(v)}>
+            <SelectTrigger className="h-9">
+              <SelectValue>
+                {(v: string) => (v === "all" ? "Status" : STATUS_LABEL[v as Card["status"]])}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="available">Disponível</SelectItem>
+              <SelectItem value="in_auction">Em leilão</SelectItem>
+              <SelectItem value="sold">Vendida</SelectItem>
+            </SelectContent>
+          </Select>
+          {canViewFinance && (
+            <Select value={payF} onValueChange={(v) => v && setPayF(v)}>
+              <SelectTrigger className="h-9">
+                <SelectValue>
+                  {(v: string) =>
+                    ({ all: "Pagamento", paid: "Pago", unpaid: "A receber", domi_pending: "Domi a depositar" }[
+                      v
+                    ] ?? "Pagamento")
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Qualquer pagamento</SelectItem>
+                <SelectItem value="paid">Pago</SelectItem>
+                <SelectItem value="unpaid">A receber</SelectItem>
+                <SelectItem value="domi_pending">Domi a depositar</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {activeFilters > 0 && (
+            <button
+              onClick={() => {
+                setQ("");
+                setStatusF("all");
+                setPayF("all");
+              }}
+              className="flex items-center gap-1 text-xs font-semibold text-ink-muted hover:text-ink"
+            >
+              <X className="h-3.5 w-3.5" /> limpar
+            </button>
+          )}
+          {canViewFinance && (
+            <Button variant="outline" size="sm" onClick={handleExport} className="ml-auto">
+              <Download className="h-3.5 w-3.5" />
+              CSV
+            </Button>
+          )}
+        </div>
+      )}
+
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.08, ease: "easeOut" }}
-        className="mt-6"
+        className="mt-4"
       >
         {cards.length === 0 ? (
           <p className="rounded-2xl border border-border bg-surface p-6 text-sm text-ink-muted">
             Nenhuma carta cadastrada ainda.
           </p>
+        ) : filtered.length === 0 ? (
+          <p className="rounded-2xl border border-border bg-surface p-6 text-sm text-ink-muted">
+            Nenhuma carta com esses filtros.
+          </p>
         ) : (
           <ul className="space-y-2.5">
-            {cards.map((card) => {
+            {filtered.map((card) => {
               const fin = financeByCardId[card.id];
               return (
                 <li
@@ -147,6 +294,15 @@ export function CartasClient({
                                 fin.dominaria_deposited_at + "T00:00:00"
                               ).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`
                             : "Domi — a depositar"}
+                        </span>
+                      )}
+                      {canViewFinance && card.status === "sold" && (
+                        <span
+                          className={`rounded px-1.5 py-0.5 font-semibold ${
+                            fin?.paid_at ? "bg-teal/15 text-teal" : "bg-destructive/15 text-destructive"
+                          }`}
+                        >
+                          {fin?.paid_at ? "Pago" : "A receber"}
                         </span>
                       )}
                     </p>

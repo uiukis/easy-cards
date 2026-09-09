@@ -35,6 +35,7 @@ export type CardFinance = {
   buyer_id: string | null;
   buyer_name: string | null;
   sold_at: string | null;
+  paid_at: string | null;
   notes: string | null;
   updated_by: string | null;
   updated_at: string;

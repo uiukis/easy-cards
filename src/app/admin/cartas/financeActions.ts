@@ -11,6 +11,8 @@ export type CardFinanceInput = {
   dominaria_fee: string;
   dominaria_deposited: boolean;
   dominaria_deposit_date: string;
+  paid: boolean;
+  paid_date: string;
   notes: string;
   mark_sold: boolean;
   sold_date: string;
@@ -39,6 +41,7 @@ export async function upsertCardFinance(cardId: string, input: CardFinanceInput)
       buyer_id: input.buyer_id,
       buyer_name: input.buyer_name || null,
       sold_at: input.mark_sold ? new Date(input.sold_date || Date.now()).toISOString() : null,
+      paid_at: input.paid ? input.paid_date || new Date().toISOString().slice(0, 10) : null,
       notes: input.notes || null,
       updated_by: user.id,
       updated_at: new Date().toISOString(),

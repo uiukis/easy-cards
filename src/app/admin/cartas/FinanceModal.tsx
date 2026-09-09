@@ -53,6 +53,8 @@ export function FinanceModal({
   const [notes, setNotes] = useState(finance?.notes ?? "");
   const [markSold, setMarkSold] = useState(!!finance?.sold_at);
   const [soldDate, setSoldDate] = useState(finance?.sold_at?.slice(0, 10) ?? todayISO());
+  const [paid, setPaid] = useState(!!finance?.paid_at);
+  const [paidDate, setPaidDate] = useState(finance?.paid_at?.slice(0, 10) ?? todayISO());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +71,8 @@ export function FinanceModal({
         dominaria_fee: brlToPlain(dominariaFee),
         dominaria_deposited: dominariaDeposited,
         dominaria_deposit_date: dominariaDepositDate,
+        paid,
+        paid_date: paidDate,
         notes,
         mark_sold: markSold,
         sold_date: soldDate,
@@ -171,6 +175,18 @@ export function FinanceModal({
             <div className="space-y-1.5">
               <Label>Data da venda</Label>
               <Input type="date" value={soldDate} onChange={(e) => setSoldDate(e.target.value)} />
+            </div>
+          )}
+
+          <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+            <Switch checked={paid} onCheckedChange={setPaid} />
+            Pagamento recebido
+          </label>
+
+          {paid && (
+            <div className="space-y-1.5">
+              <Label>Data do pagamento</Label>
+              <Input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
             </div>
           )}
 
