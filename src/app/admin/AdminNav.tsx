@@ -17,6 +17,7 @@ import {
   Lock,
   PackageOpen,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ const ICONS: Record<string, LucideIcon> = {
   Lock,
   PackageOpen,
   BookOpen,
+  Sparkles,
 };
 
 export type AdminNavItem = {

@@ -1,12 +1,18 @@
 import type { UserRole } from "./supabase/types";
 
-export type PermissionKey = "view_finance" | "manage_cards" | "manage_quadro" | "manage_users";
+export type PermissionKey =
+  | "view_finance"
+  | "manage_cards"
+  | "manage_quadro"
+  | "manage_users"
+  | "view_wishlists";
 
 export const PERMISSION_LABEL: Record<PermissionKey, string> = {
   view_finance: "Ver valores e financeiro",
   manage_cards: "Gerenciar catálogo de cartas",
   manage_quadro: "Gerenciar quadro (apoiadores, imprensa)",
   manage_users: "Gerenciar usuários e permissões",
+  view_wishlists: "Ver listas de desejo dos usuários",
 };
 
 export type Permissions = Record<PermissionKey, boolean>;
@@ -16,6 +22,7 @@ const ALL_TRUE: Permissions = {
   manage_cards: true,
   manage_quadro: true,
   manage_users: true,
+  view_wishlists: true,
 };
 
 const ALL_FALSE: Permissions = {
@@ -23,6 +30,7 @@ const ALL_FALSE: Permissions = {
   manage_cards: false,
   manage_quadro: false,
   manage_users: false,
+  view_wishlists: false,
 };
 
 // The CTO is always fully allowed and is the only one who can edit this

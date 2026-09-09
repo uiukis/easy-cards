@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Menu, X, Wallet, BookOpen, Home, LayoutDashboard } from "lucide-react";
+import { Menu, X, Wallet, BookOpen, Home, LayoutDashboard, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -16,6 +16,7 @@ const BASE_LINKS: NavLink[] = [
   { href: "/", label: "Início", icon: Home },
   { href: "/minhas-cartas", label: "Minhas cartas", icon: Wallet },
   { href: "/fichario", label: "Fichário", icon: BookOpen },
+  { href: "/lista-de-desejos", label: "Desejos", icon: Sparkles },
 ];
 
 export function CustomerNavClient({ isStaff = false }: { isStaff?: boolean }) {

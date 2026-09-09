@@ -7,6 +7,24 @@ export type Profile = {
   role: UserRole;
   favorite_pokemon: string | null;
   favorite_pokemon_sprite: string | null;
+  wishlist_public: boolean;
+  share_slug: string | null;
+  created_at: string;
+};
+
+export type WishlistItem = {
+  id: string;
+  user_id: string;
+  tcg_api_id: string | null;
+  name: string;
+  set_name: string | null;
+  card_number: string | null;
+  image_url: string;
+  rarity: string | null;
+  types: string | null;
+  priority: number; // 1 alta / 2 normal / 3 baixa
+  note: string | null;
+  acquired: boolean;
   created_at: string;
 };
 
@@ -104,6 +122,7 @@ export type BinderCard = {
   position: number;
   variant: string | null;
   span_cols: number;
+  span_rows: number;
   rarity: string | null;
   types: string | null;
   is_image: boolean;
