@@ -1,9 +1,13 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.17.0**.
+Datas no fuso de Brasília. Versão atual: **1.18.0**.
 
 ---
+
+## 1.18.0 — Histórico da carta · 09/09/2026
+
+- Cada carta em *Cartas* mostra **quem cadastrou e quando**, e **quem editou por último** — pra ter controle de quem mexeu no quê.
 
 ## 1.17.0 — Vitrine e alerta de desejo · 09/09/2026
 
