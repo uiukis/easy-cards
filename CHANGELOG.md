@@ -1,9 +1,13 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.25.0**.
+Datas no fuso de Brasília. Versão atual: **1.26.0**.
 
 ---
+
+## 1.26.0 — Login só pelo telefone · 09/09/2026
+
+- Revertido o campo "telefone ou email" no login — voltou a ser só telefone. Email fica só como dado de recuperação/aviso na conta.
 
 ## 1.25.0 — Rolagem suave + parallax · 09/09/2026
 
@@ -18,8 +22,7 @@ Datas no fuso de Brasília. Versão atual: **1.25.0**.
 ## 1.23.0 — Usuário e email · 09/09/2026
 
 - **Nome de usuário** (@handle): vira o link do seu perfil público — `easycards/u/seu-nome` em vez de um código aleatório. Define em *Meu perfil*.
-- **Email opcional** na conta: serve pra recuperar o acesso, **entrar sem o telefone** e (em breve) receber aviso quando uma carta da sua lista de desejo aparecer. Confirmação por link.
-- **Login aceita telefone OU email** no mesmo campo.
+- **Email opcional** na conta: serve pra recuperar o acesso e (em breve) receber aviso quando uma carta da sua lista de desejo aparecer. Confirmação por link. _(Login continua só pelo telefone — o campo combinado foi revertido na 1.26.0.)_
 - Perfil público com email confirmado mostra "contato confirmado" (um degrau abaixo do selo ✓ da equipe).
 
 ## 1.22.0 — Telefone só a equipe altera · 09/09/2026

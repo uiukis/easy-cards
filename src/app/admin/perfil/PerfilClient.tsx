@@ -262,8 +262,8 @@ function EmailSection({
         <h2 className="font-display text-lg text-ink">EMAIL (OPCIONAL)</h2>
       </div>
       <p className="text-xs text-ink-muted">
-        Serve pra recuperar a conta, entrar sem o telefone e receber aviso quando uma carta da sua
-        lista de desejo aparecer.
+        Serve pra recuperar a conta se perder o acesso e receber aviso quando uma carta da sua lista
+        de desejo aparecer. (O login continua sendo pelo telefone.)
       </p>
 
       {email && confirmed && !pending && (

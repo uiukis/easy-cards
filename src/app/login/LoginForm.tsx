@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Lock, AtSign, Loader2, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Lock, Phone, Loader2, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { maskPhoneBR, toE164BR } from "@/lib/phone";
 import { AuthShell, authFieldClass } from "@/components/AuthShell";
@@ -14,13 +14,11 @@ import { Label } from "@/components/ui/label";
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [identifier, setIdentifier] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const isEmail = identifier.includes("@");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,14 +26,13 @@ export function LoginForm() {
     setError(null);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword(
-      isEmail
-        ? { email: identifier.trim(), password }
-        : { phone: toE164BR(identifier), password }
-    );
+    const { error } = await supabase.auth.signInWithPassword({
+      phone: toE164BR(phone),
+      password,
+    });
 
     if (error) {
-      setError(isEmail ? "Email ou senha incorretos." : "Número ou senha incorretos.");
+      setError("Número ou senha incorretos.");
       setLoading(false);
       return;
     }
@@ -60,17 +57,16 @@ export function LoginForm() {
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="identifier" className="text-xs font-semibold text-ink-muted">
-            <AtSign className="h-3.5 w-3.5" /> Telefone ou email
+          <Label htmlFor="phone" className="text-xs font-semibold text-ink-muted">
+            <Phone className="h-3.5 w-3.5" /> Telefone
           </Label>
           <Input
-            id="identifier"
+            id="phone"
+            type="tel"
             required
-            value={identifier}
-            onChange={(e) =>
-              setIdentifier(e.target.value.includes("@") ? e.target.value : maskPhoneBR(e.target.value))
-            }
-            placeholder="(11) 91234-5678 ou voce@email.com"
+            value={phone}
+            onChange={(e) => setPhone(maskPhoneBR(e.target.value))}
+            placeholder="(11) 91234-5678"
             className={authFieldClass}
           />
         </div>
