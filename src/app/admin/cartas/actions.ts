@@ -39,6 +39,14 @@ export async function createCard(input: CardInput) {
   });
 
   if (error) throw new Error(error.message);
+
+  await supabase.rpc("notify_wishlist_match", {
+    p_name: input.name,
+    p_card_number: input.card_number || "",
+    p_tcg_api_id: input.tcg_api_id || "",
+    p_image_url: input.image_url || "",
+  });
+
   revalidatePath("/admin/cartas");
 }
 
@@ -98,6 +106,16 @@ export async function createManyCards(cards: BulkCardInput[]) {
 
   const { error } = await supabase.from("cards").insert(rows);
   if (error) throw new Error(error.message);
+
+  for (const c of cards) {
+    await supabase.rpc("notify_wishlist_match", {
+      p_name: c.name,
+      p_card_number: c.card_number || "",
+      p_tcg_api_id: c.tcg_api_id || "",
+      p_image_url: c.image_url || "",
+    });
+  }
+
   revalidatePath("/admin/cartas");
   return { added: rows.length };
 }

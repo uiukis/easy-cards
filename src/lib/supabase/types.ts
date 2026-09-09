@@ -15,6 +15,18 @@ export type Profile = {
   created_at: string;
 };
 
+export type Notification = {
+  id: string;
+  user_id: string;
+  kind: "wishlist_match" | "purchase_confirm" | "dispute" | "info";
+  title: string;
+  body: string | null;
+  link: string | null;
+  image_url: string | null;
+  read_at: string | null;
+  created_at: string;
+};
+
 export type Auction = {
   id: string;
   title: string;

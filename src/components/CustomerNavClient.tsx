@@ -5,10 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
-import { Menu, X, Wallet, BookOpen, Home, LayoutDashboard, Sparkles } from "lucide-react";
+import { Menu, X, Wallet, BookOpen, Home, LayoutDashboard, Sparkles, Bell } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { LogoutButton } from "@/app/admin/LogoutButton";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 type NavLink = { href: string; label: string; icon: LucideIcon };
 
@@ -60,11 +61,13 @@ export function CustomerNavClient({ isStaff = false }: { isStaff?: boolean }) {
             {link.label}
           </Link>
         ))}
+        <NotificationsBell className="ml-1" />
         <LogoutButton className="ml-1" />
         <ThemeToggle />
       </nav>
 
       <div className="flex items-center gap-2 md:hidden">
+        <NotificationsBell />
         <ThemeToggle />
         <button
           onClick={() => setOpen(true)}
@@ -104,7 +107,7 @@ export function CustomerNavClient({ isStaff = false }: { isStaff?: boolean }) {
               </div>
 
               <nav className="mt-4 flex-1 space-y-1">
-                {links.map((link) => (
+                {[...links, { href: "/avisos", label: "Avisos", icon: Bell }].map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
