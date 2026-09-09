@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Sparkles, BadgeCheck, ShieldQuestion } from "lucide-react";
+import { Sparkles, BadgeCheck, ShieldQuestion, BookOpen, Layers } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SITE } from "@/lib/site";
 import { WhatsAppIcon } from "@/components/icons";
@@ -30,14 +30,25 @@ type PublicTrade = {
 };
 
 type PublicWishlist = {
+  id: string;
   name: string | null;
   username: string | null;
   verified: boolean;
   email_confirmed: boolean;
   avatar: string | null;
   pokemon: string | null;
+  member_since: string | null;
   items: PublicItem[];
   trades: PublicTrade[];
+};
+
+type PublicBinder = {
+  id: string;
+  name: string;
+  cover_image_url: string | null;
+  have: number;
+  want: number;
+  set_total: number | null;
 };
 
 const PRIORITY_LABEL: Record<number, string> = {
@@ -51,6 +62,35 @@ async function load(slug: string): Promise<PublicWishlist | null> {
   const { data, error } = await supabase.rpc("public_wishlist", { p_slug: slug });
   if (error || !data) return null;
   return data as PublicWishlist;
+}
+
+async function loadBinders(userId: string): Promise<PublicBinder[]> {
+  const supabase = await createClient();
+  const { data: binders } = await supabase
+    .from("binders")
+    .select("id, name, cover_image_url, set_total")
+    .eq("user_id", userId)
+    .eq("share_enabled", true)
+    .order("created_at", { ascending: false });
+  if (!binders || binders.length === 0) return [];
+
+  const ids = binders.map((b) => b.id);
+  const { data: cards } = await supabase
+    .from("binder_cards")
+    .select("binder_id, want, is_image")
+    .in("binder_id", ids);
+
+  return binders.map((b) => {
+    const rows = (cards ?? []).filter((c) => c.binder_id === b.id && !c.is_image);
+    return {
+      id: b.id,
+      name: b.name,
+      cover_image_url: b.cover_image_url,
+      set_total: b.set_total,
+      have: rows.filter((c) => !c.want).length,
+      want: rows.filter((c) => c.want).length,
+    };
+  });
 }
 
 export async function generateMetadata({
@@ -76,6 +116,9 @@ export default async function PublicWishlistPage({
   const { slug } = await params;
   const data = await load(slug);
   if (!data) notFound();
+
+  const binders = await loadBinders(data.id);
+  const totalHave = binders.reduce((s, b) => s + b.have, 0);
 
   const who = data.name ?? "Colecionador";
   const groups = [1, 2, 3]
@@ -125,6 +168,30 @@ export default async function PublicWishlistPage({
           você tem alguma pra trocar ou vender, chama!
         </p>
 
+        <div className="mt-4 flex flex-wrap gap-2 text-xs">
+          {[
+            binders.length > 0 && [`${binders.length}`, binders.length === 1 ? "fichário" : "fichários"],
+            totalHave > 0 && [`${totalHave}`, "cartas organizadas"],
+            data.trades.length > 0 && [`${data.trades.length}`, "pra troca"],
+            data.member_since && [
+              new Date(data.member_since).toLocaleDateString("pt-BR", { month: "short", year: "numeric" }),
+              "desde",
+            ],
+          ]
+            .filter(Boolean)
+            .map((s) => {
+              const [v, label] = s as [string, string];
+              return (
+                <span
+                  key={label}
+                  className="rounded-full border-2 border-ink/10 bg-surface px-3 py-1 font-semibold text-ink"
+                >
+                  {v} <span className="font-normal text-ink-muted">{label}</span>
+                </span>
+              );
+            })}
+        </div>
+
         <a
           href={SITE.whatsappGroup}
           target="_blank"
@@ -135,7 +202,7 @@ export default async function PublicWishlistPage({
           Falar no grupo da Easy Cards
         </a>
 
-        {data.items.length === 0 && data.trades.length === 0 ? (
+        {data.items.length === 0 && data.trades.length === 0 && binders.length === 0 ? (
           <p className="mt-10 rounded-2xl border-2 border-dashed border-ink/15 bg-surface/60 p-6 text-center text-sm text-ink-muted">
             {who} ainda não listou nenhuma carta.
           </p>
@@ -210,6 +277,52 @@ export default async function PublicWishlistPage({
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {binders.length > 0 && (
+          <div className="mt-10">
+            <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-orange-deep">
+              <BookOpen className="h-3.5 w-3.5" />
+              Fichários públicos · {binders.length}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {binders.map((b) => {
+                const pct =
+                  b.set_total && b.set_total > 0
+                    ? Math.min(100, Math.round((b.have / b.set_total) * 100))
+                    : null;
+                return (
+                  <Link
+                    key={b.id}
+                    href={`/b/${b.id}`}
+                    className="flex gap-3 overflow-hidden rounded-2xl border-2 border-ink/10 bg-surface p-3 transition-transform hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    {b.cover_image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- user cover URL
+                      <img
+                        src={b.cover_image_url}
+                        alt=""
+                        className="h-16 w-16 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-surface-alt text-ink-muted">
+                        <Layers className="h-5 w-5" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-ink">{b.name}</p>
+                      <p className="mt-0.5 text-xs text-ink-muted">
+                        {b.set_total
+                          ? `${b.have}/${b.set_total} do set${pct !== null ? ` · ${pct}%` : ""}`
+                          : `${b.have} ${b.have === 1 ? "carta" : "cartas"}`}
+                        {b.want > 0 && ` · ${b.want} na procura`}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}

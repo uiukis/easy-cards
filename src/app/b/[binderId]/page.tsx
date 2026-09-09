@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { HoloShine } from "@/components/HoloShine";
+import { BinderSocial, type BinderComment } from "./BinderSocial";
 
 function holoKind(variant: string | null): "holo" | "reverse" | "special" | null {
   if (variant === "holo") return "holo";
@@ -72,6 +73,27 @@ export default async function SharedBinderPage({
     .select("*")
     .eq("binder_id", binderId)
     .order("position", { ascending: true });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [{ count: likeCount }, { data: myLike }, { data: commentRows }] = await Promise.all([
+    supabase.from("binder_likes").select("*", { count: "exact", head: true }).eq("binder_id", binderId),
+    user
+      ? supabase
+          .from("binder_likes")
+          .select("binder_id")
+          .eq("binder_id", binderId)
+          .eq("user_id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("binder_comments")
+      .select("id, body, author_name, author_sprite, created_at, user_id")
+      .eq("binder_id", binderId)
+      .order("created_at", { ascending: true }),
+  ]);
 
   const { cols, rows } = GRID_SIZES[binder.grid_size] ?? GRID_SIZES["3x3"];
   const allCards = cards ?? [];
@@ -221,6 +243,15 @@ export default async function SharedBinderPage({
             ))}
           </div>
         )}
+
+        <BinderSocial
+          binderId={binderId}
+          initialLiked={!!myLike}
+          initialLikeCount={likeCount ?? 0}
+          comments={(commentRows ?? []) as BinderComment[]}
+          currentUserId={user?.id ?? null}
+          isOwner={user?.id === binder.user_id}
+        />
       </div>
     </main>
   );
