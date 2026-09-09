@@ -12,6 +12,7 @@ import {
   Users,
   PackageOpen,
   HandCoins,
+  AlertTriangle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getEffectivePermissions } from "@/lib/get-permissions";
@@ -78,6 +79,57 @@ export default async function AdminDashboard() {
       .gte("sold_at", startOfMonth.toISOString());
     monthRevenue = (monthSales ?? []).reduce((sum, s) => sum + (Number(s.final_price) || 0), 0);
   }
+
+  // "Precisa de olho" — coisas paradas esperando ação da equipe.
+  const [{ count: disputed }, { count: openActivity }] = await Promise.all([
+    supabase
+      .from("card_finance")
+      .select("*", { count: "exact", head: true })
+      .not("buyer_disputed_at", "is", null),
+    supabase
+      .from("admin_activity")
+      .select("*", { count: "exact", head: true })
+      .is("resolved_at", null),
+  ]);
+
+  let consignOwed = 0;
+  let consignAmount = 0;
+  if (permissions.view_finance) {
+    const { data: consign } = await supabase
+      .from("card_finance")
+      .select("final_price, commission_pct, consignor_paid_at, consignor_name")
+      .not("consignor_name", "is", null)
+      .is("consignor_paid_at", null)
+      .not("sold_at", "is", null);
+    consignOwed = (consign ?? []).length;
+    consignAmount = (consign ?? []).reduce((sum, c) => {
+      const price = Number(c.final_price) || 0;
+      const pct = Number(c.commission_pct) || 0;
+      return sum + price * (1 - pct / 100);
+    }, 0);
+  }
+
+  const attention = [
+    (disputed ?? 0) > 0 && {
+      href: "/admin/financeiro",
+      label: "Compra contestada",
+      value: `${disputed}`,
+      tone: "flag" as const,
+    },
+    permissions.view_finance &&
+      consignOwed > 0 && {
+        href: "/admin/financeiro",
+        label: "Repasse de consignação",
+        value: `R$ ${consignAmount.toFixed(2)}`,
+        tone: "warn" as const,
+      },
+    (openActivity ?? 0) > 0 && {
+      href: "/admin/atividade",
+      label: "Atividade sem resolver",
+      value: `${openActivity}`,
+      tone: "muted" as const,
+    },
+  ].filter(Boolean) as { href: string; label: string; value: string; tone: "flag" | "warn" | "muted" }[];
 
   const stats = [
     { label: "Disponíveis", value: available ?? 0, icon: CreditCard, color: "text-orange-deep" },
@@ -167,6 +219,42 @@ export default async function AdminDashboard() {
           </Reveal>
         )}
       </div>
+
+      {attention.length > 0 && (
+        <Reveal delay={0.05} className="mt-6">
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-destructive" />
+                <h2 className="font-display text-sm tracking-wide text-ink">PRECISA DE OLHO</h2>
+              </div>
+              <ul className="mt-3 divide-y divide-ink/10">
+                {attention.map((a) => (
+                  <li key={a.label}>
+                    <Link
+                      href={a.href}
+                      className="flex items-center justify-between gap-3 py-2.5 text-sm transition-colors hover:text-primary"
+                    >
+                      <span className="text-ink-muted">{a.label}</span>
+                      <span
+                        className={`shrink-0 font-display text-lg ${
+                          a.tone === "flag"
+                            ? "text-destructive"
+                            : a.tone === "warn"
+                              ? "text-orange-deep"
+                              : "text-ink"
+                        }`}
+                      >
+                        {a.value}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </Reveal>
+      )}
 
       <div className="mt-8 grid gap-4 lg:grid-cols-2">
         <Reveal delay={0.3}>

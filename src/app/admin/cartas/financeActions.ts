@@ -20,6 +20,7 @@ export type CardFinanceInput = {
   commission_pct: string;
   consignor_paid: boolean;
   consignor_paid_date: string;
+  photo_url: string;
 };
 
 export async function upsertCardFinance(cardId: string, input: CardFinanceInput) {
@@ -52,6 +53,7 @@ export async function upsertCardFinance(cardId: string, input: CardFinanceInput)
       consignor_paid_at: input.consignor_paid
         ? input.consignor_paid_date || new Date().toISOString().slice(0, 10)
         : null,
+      photo_url: input.photo_url?.trim() || null,
       updated_by: user.id,
       updated_at: new Date().toISOString(),
     },

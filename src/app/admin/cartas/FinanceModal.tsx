@@ -6,6 +6,7 @@ import type { Card, CardFinance } from "@/lib/supabase/types";
 import { upsertCardFinance } from "./financeActions";
 import { maskBRL, brlFromNumber, brlToPlain } from "@/lib/money";
 import { BuyerPicker } from "./BuyerPicker";
+import { ImageUploadField } from "@/components/ImageUploadField";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -63,6 +64,7 @@ export function FinanceModal({
   const [consignorPaidDate, setConsignorPaidDate] = useState(
     finance?.consignor_paid_at?.slice(0, 10) ?? todayISO()
   );
+  const [photoUrl, setPhotoUrl] = useState(finance?.photo_url ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +90,7 @@ export function FinanceModal({
         commission_pct: commissionPct.replace(",", "."),
         consignor_paid: consignorPaid,
         consignor_paid_date: consignorPaidDate,
+        photo_url: photoUrl,
       });
       onSaved();
     } catch (err) {
@@ -241,6 +244,14 @@ export function FinanceModal({
                 )}
               </>
             )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Foto real da carta (condição)</Label>
+            <p className="text-[11px] text-ink-muted">
+              Aparece pro comprador em “Minhas cartas”. Mostra o estado de verdade, não a arte oficial.
+            </p>
+            <ImageUploadField value={photoUrl} onChange={setPhotoUrl} shape="square" />
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}

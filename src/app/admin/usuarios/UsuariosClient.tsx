@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, AlertTriangle, Pencil, Check, X, BadgeCheck, ShieldQuestion } from "lucide-react";
 import type { Profile, UserRole } from "@/lib/supabase/types";
+import type { PermissionKey } from "@/lib/permissions";
 import { maskPhoneBR } from "@/lib/phone";
 import { updateUserRole, updateUserPhone, setUserVerified } from "./actions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
@@ -24,14 +25,25 @@ const ROLE_LABEL: Record<UserRole, string> = {
   customer: "Cliente",
 };
 
+const PERM_SHORT: Record<PermissionKey, string> = {
+  view_finance: "Financeiro",
+  manage_cards: "Cartas",
+  manage_quadro: "Quadro",
+  manage_users: "Usuários",
+  view_wishlists: "Listas de desejo",
+  manage_auctions: "Leilões",
+};
+
 export function UsuariosClient({
   profiles,
   currentUserId,
   canEditRoles,
+  permsById,
 }: {
   profiles: Profile[];
   currentUserId: string;
   canEditRoles: boolean;
+  permsById: Record<string, PermissionKey[]>;
 }) {
   const [rows, setRows] = useState(profiles);
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -210,6 +222,28 @@ export function UsuariosClient({
                 </>
               ) : (
                 <Badge variant="secondary">{ROLE_LABEL[p.role]}</Badge>
+              )}
+            </div>
+
+            <div className="basis-full pl-11 text-[11px] text-ink-muted">
+              {p.role === "cto" ? (
+                <span className="font-semibold text-teal">Vê tudo (CTO)</span>
+              ) : p.role === "customer" ? (
+                <span>Vê só as ferramentas de cliente (fichário, desejos…)</span>
+              ) : (permsById[p.id] ?? []).length === 0 ? (
+                <span>Equipe, mas sem nenhuma permissão de painel ligada</span>
+              ) : (
+                <span className="flex flex-wrap items-center gap-1">
+                  <span className="mr-0.5">Vê:</span>
+                  {(permsById[p.id] ?? []).map((k) => (
+                    <span
+                      key={k}
+                      className="rounded-full border border-ink/15 bg-surface-alt px-1.5 py-0.5 font-medium text-ink"
+                    >
+                      {PERM_SHORT[k]}
+                    </span>
+                  ))}
+                </span>
               )}
             </div>
           </li>

@@ -133,6 +133,22 @@ export default async function MinhasCartasPage() {
                         </Badge>
                       )}
                     </div>
+                    {p.photo_url && (
+                      <a
+                        href={p.photo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 flex items-center gap-2 rounded-lg border border-ink/10 bg-surface-alt p-1.5 text-xs font-medium text-ink transition-colors hover:bg-surface"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- user-uploaded photo URL */}
+                        <img
+                          src={p.photo_url}
+                          alt="Foto real da carta"
+                          className="h-12 w-9 rounded object-cover"
+                        />
+                        Foto real da sua carta
+                      </a>
+                    )}
                     <PurchaseConfirm
                       financeId={p.id}
                       confirmedAt={p.buyer_confirmed_at}
