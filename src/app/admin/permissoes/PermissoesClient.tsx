@@ -7,14 +7,6 @@ import type { UserRole } from "@/lib/supabase/types";
 import { setPermission, setUserPermission, clearUserPermission } from "./actions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -118,38 +110,29 @@ export function PermissoesClient({
         icon={Lock}
       />
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Permissão (padrão do papel)</TableHead>
-              {ROLES.map((r) => (
-                <TableHead key={r.role}>{r.label}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {PERMISSION_KEYS.map((key) => (
-              <TableRow key={key}>
-                <TableCell className="text-ink">{PERMISSION_LABEL[key]}</TableCell>
-                {ROLES.map((r) => {
-                  const cellKey = `${r.role}:${key}`;
-                  const allowed = matrix[cellKey] ?? false;
-                  return (
-                    <TableCell key={r.role}>
-                      <ToggleCell
-                        allowed={allowed}
-                        saving={savingKey === cellKey}
-                        onClick={() => toggleRole(r.role, key)}
-                      />
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <ul className="mt-6 space-y-2.5">
+        {PERMISSION_KEYS.map((key) => (
+          <li key={key} className="rounded-2xl border border-border bg-surface p-3">
+            <p className="text-sm font-semibold text-ink">{PERMISSION_LABEL[key]}</p>
+            <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
+              {ROLES.map((r) => {
+                const cellKey = `${r.role}:${key}`;
+                const allowed = matrix[cellKey] ?? false;
+                return (
+                  <div key={r.role} className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-ink-muted">{r.label}</span>
+                    <ToggleCell
+                      allowed={allowed}
+                      saving={savingKey === cellKey}
+                      onClick={() => toggleRole(r.role, key)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </li>
+        ))}
+      </ul>
 
       <div className="mt-10 flex items-center gap-2">
         <UserCog className="h-5 w-5 text-primary" />
@@ -184,47 +167,42 @@ export function PermissoesClient({
           </Select>
 
           {selectedProfile && roleDefaults && (
-            <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-surface">
-              <Table>
-                <TableBody>
-                  {PERMISSION_KEYS.map((key) => {
-                    const cellKey = `${selectedUserId}:${key}`;
-                    const hasOverride = cellKey in overrides;
-                    const effective = hasOverride ? overrides[cellKey] : roleDefaults[key];
-                    return (
-                      <TableRow key={key}>
-                        <TableCell className="text-ink">
-                          {PERMISSION_LABEL[key]}
-                          {hasOverride && (
-                            <span className="ml-2 text-[10px] font-semibold uppercase text-primary">
-                              personalizado
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <ToggleCell
-                            allowed={effective}
-                            saving={savingUserKey === cellKey}
-                            onClick={() => toggleUser(key, effective)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {hasOverride && (
-                            <button
-                              type="button"
-                              onClick={() => resetUser(key)}
-                              className="text-xs font-semibold text-ink-muted underline"
-                            >
-                              usar padrão do papel
-                            </button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+            <ul className="mt-4 space-y-2">
+              {PERMISSION_KEYS.map((key) => {
+                const cellKey = `${selectedUserId}:${key}`;
+                const hasOverride = cellKey in overrides;
+                const effective = hasOverride ? overrides[cellKey] : roleDefaults[key];
+                return (
+                  <li
+                    key={key}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-border bg-surface p-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm text-ink">{PERMISSION_LABEL[key]}</span>
+                      {hasOverride && (
+                        <span className="ml-2 text-[10px] font-semibold uppercase text-primary">
+                          personalizado
+                        </span>
+                      )}
+                    </div>
+                    {hasOverride && (
+                      <button
+                        type="button"
+                        onClick={() => resetUser(key)}
+                        className="text-xs font-semibold text-ink-muted underline"
+                      >
+                        usar padrão
+                      </button>
+                    )}
+                    <ToggleCell
+                      allowed={effective}
+                      saving={savingUserKey === cellKey}
+                      onClick={() => toggleUser(key, effective)}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       )}

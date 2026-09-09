@@ -9,6 +9,8 @@ export type CardFinanceInput = {
   buyer_name: string;
   delivery_method: string;
   dominaria_fee: string;
+  dominaria_deposited: boolean;
+  dominaria_deposit_date: string;
   notes: string;
   mark_sold: boolean;
   sold_date: string;
@@ -29,6 +31,10 @@ export async function upsertCardFinance(cardId: string, input: CardFinanceInput)
       dominaria_fee:
         input.delivery_method === "dominaria" && input.dominaria_fee
           ? Number(input.dominaria_fee)
+          : null,
+      dominaria_deposited_at:
+        input.delivery_method === "dominaria" && input.dominaria_deposited
+          ? input.dominaria_deposit_date || new Date().toISOString().slice(0, 10)
           : null,
       buyer_id: input.buyer_id,
       buyer_name: input.buyer_name || null,

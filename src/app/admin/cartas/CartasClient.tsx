@@ -134,6 +134,21 @@ export function CartasClient({
                           R$ {Number(fin.final_price).toFixed(2)}
                         </span>
                       )}
+                      {canViewFinance && fin?.delivery_method === "dominaria" && (
+                        <span
+                          className={`rounded px-1.5 py-0.5 font-semibold ${
+                            fin.dominaria_deposited_at
+                              ? "bg-teal/15 text-teal"
+                              : "bg-orange/15 text-orange-deep"
+                          }`}
+                        >
+                          {fin.dominaria_deposited_at
+                            ? `Domi ✓ ${new Date(
+                                fin.dominaria_deposited_at + "T00:00:00"
+                              ).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}`
+                            : "Domi — a depositar"}
+                        </span>
+                      )}
                     </p>
                   </div>
 

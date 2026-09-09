@@ -46,6 +46,10 @@ export function FinanceModal({
   const [buyerName, setBuyerName] = useState(finance?.buyer_name ?? "");
   const [deliveryMethod, setDeliveryMethod] = useState(finance?.delivery_method ?? "none");
   const [dominariaFee, setDominariaFee] = useState(brlFromNumber(finance?.dominaria_fee));
+  const [dominariaDeposited, setDominariaDeposited] = useState(!!finance?.dominaria_deposited_at);
+  const [dominariaDepositDate, setDominariaDepositDate] = useState(
+    finance?.dominaria_deposited_at?.slice(0, 10) ?? todayISO()
+  );
   const [notes, setNotes] = useState(finance?.notes ?? "");
   const [markSold, setMarkSold] = useState(!!finance?.sold_at);
   const [soldDate, setSoldDate] = useState(finance?.sold_at?.slice(0, 10) ?? todayISO());
@@ -63,6 +67,8 @@ export function FinanceModal({
         buyer_name: buyerName,
         delivery_method: deliveryMethod === "none" ? "" : deliveryMethod,
         dominaria_fee: brlToPlain(dominariaFee),
+        dominaria_deposited: dominariaDeposited,
+        dominaria_deposit_date: dominariaDepositDate,
         notes,
         mark_sold: markSold,
         sold_date: soldDate,
@@ -133,6 +139,21 @@ export function FinanceModal({
                 value={dominariaFee}
                 onChange={(e) => setDominariaFee(maskBRL(e.target.value))}
               />
+
+              <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                <Switch checked={dominariaDeposited} onCheckedChange={setDominariaDeposited} />
+                Já depositei na Dominaria
+              </label>
+              {dominariaDeposited && (
+                <div className="mt-2 space-y-1.5">
+                  <Label>Data do depósito</Label>
+                  <Input
+                    type="date"
+                    value={dominariaDepositDate}
+                    onChange={(e) => setDominariaDepositDate(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
           )}
 

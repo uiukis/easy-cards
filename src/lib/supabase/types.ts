@@ -30,6 +30,7 @@ export type CardFinance = {
   final_price: number | null;
   delivery_method: "maos" | "dominaria" | null;
   dominaria_fee: number | null;
+  dominaria_deposited_at: string | null;
   buyer_id: string | null;
   buyer_name: string | null;
   sold_at: string | null;

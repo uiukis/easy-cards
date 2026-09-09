@@ -13,14 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 
 const ROLE_LABEL: Record<UserRole, string> = {
   cto: "CTO",
@@ -73,57 +65,51 @@ export function UsuariosClient({
         </div>
       )}
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-surface">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Telefone</TableHead>
-              <TableHead>Permissão</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-semibold text-ink">
-                  {p.full_name || "—"}
-                  {p.id === currentUserId && (
-                    <span className="ml-2 text-xs font-normal text-ink-muted">(você)</span>
+      <ul className="mt-6 space-y-2.5">
+        {rows.map((p) => (
+          <li
+            key={p.id}
+            className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-border bg-surface p-3"
+          >
+            <div className="min-w-0 flex-1 basis-40">
+              <p className="truncate text-sm font-semibold text-ink">
+                {p.full_name || "—"}
+                {p.id === currentUserId && (
+                  <span className="ml-2 text-xs font-normal text-ink-muted">(você)</span>
+                )}
+              </p>
+              <p className="text-xs text-ink-muted">{p.phone}</p>
+            </div>
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {canEditRoles ? (
+                <>
+                  <Select
+                    value={p.role}
+                    disabled={p.id === currentUserId || savingId === p.id}
+                    onValueChange={(v) => v && handleRoleChange(p.id, v as UserRole)}
+                  >
+                    <SelectTrigger size="sm">
+                      <SelectValue>{(v: UserRole) => ROLE_LABEL[v]}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(ROLE_LABEL) as UserRole[]).map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {ROLE_LABEL[role]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {savingId === p.id && (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-muted" />
                   )}
-                </TableCell>
-                <TableCell className="text-ink-muted">{p.phone}</TableCell>
-                <TableCell>
-                  {canEditRoles ? (
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={p.role}
-                        disabled={p.id === currentUserId || savingId === p.id}
-                        onValueChange={(v) => v && handleRoleChange(p.id, v as UserRole)}
-                      >
-                        <SelectTrigger size="sm">
-                          <SelectValue>{(v: UserRole) => ROLE_LABEL[v]}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(Object.keys(ROLE_LABEL) as UserRole[]).map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {ROLE_LABEL[role]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {savingId === p.id && (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-muted" />
-                      )}
-                    </div>
-                  ) : (
-                    <Badge variant="secondary">{ROLE_LABEL[p.role]}</Badge>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                </>
+              ) : (
+                <Badge variant="secondary">{ROLE_LABEL[p.role]}</Badge>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
