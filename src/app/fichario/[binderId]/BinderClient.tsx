@@ -31,10 +31,12 @@ import {
 } from "lucide-react";
 import type { Binder, BinderCard } from "@/lib/supabase/types";
 import { PRICES_ENABLED } from "@/lib/features";
+import { uploadBinderImage } from "@/lib/binder-image";
 import type { SearchResult } from "@/app/admin/cartas/CardSearch";
 import { AddCardsDialog } from "../AddCardsDialog";
 import {
   addManyToBinder,
+  addImageSlot,
   removeFromBinder,
   updateGridSize,
   renameBinder,
@@ -147,6 +149,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const [descDraft, setDescDraft] = useState(binder.description ?? "");
   const [page, setPage] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -360,6 +363,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         span_cols: 1,
         rarity: c.rarity ?? null,
         types: c.types ?? null,
+        is_image: false,
         created_at: new Date().toISOString(),
       }));
 
@@ -375,6 +379,43 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       setSearchOpen(false);
     } finally {
       setAdding(false);
+    }
+  }
+
+  async function handleAddImage(file: File, pageIndex: number) {
+    clearHistory();
+    setUploadingSlot(pageIndex);
+    try {
+      const url = await uploadBinderImage(file);
+      const pc = pages[pageIndex] ?? [];
+      const atIndex = pc.length < cardsPerPage ? pageIndex * cardsPerPage + pc.length : cards.length;
+      const { id } = await addImageSlot(binder.id, url, atIndex);
+      const slot: BinderCard = {
+        id,
+        user_id: "",
+        binder_id: binder.id,
+        tcg_api_id: null,
+        name: "Imagem",
+        set_name: null,
+        card_number: null,
+        image_url: url,
+        position: 0,
+        variant: null,
+        span_cols: 1,
+        rarity: null,
+        types: null,
+        is_image: true,
+        created_at: new Date().toISOString(),
+      };
+      setCards((prev) => {
+        const next = [...prev];
+        next.splice(Math.min(atIndex, next.length), 0, slot);
+        return next.map((c, i) => ({ ...c, position: i }));
+      });
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Não deu pra enviar a imagem.");
+    } finally {
+      setUploadingSlot(null);
     }
   }
 
@@ -624,7 +665,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                 >
                   {selectedIds.has(card.id) && <Check className="h-3 w-3" />}
                 </div>
-              ) : (
+              ) : card.is_image ? null : (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -668,7 +709,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                 </div>
               )}
 
-              {!selectMode && (
+              {!selectMode && !card.is_image && (
                 <div onClick={(e) => e.stopPropagation()} className="absolute bottom-1 right-1">
                   <Select
                     value={card.variant ?? "normal"}
@@ -692,10 +733,10 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
 
           {Array.from({ length: empties }).map((_, i) => {
             const slotKey = `p${pageIndex}-empty-${i}`;
+            const firstEmpty = i === 0;
             return (
-              <button
+              <div
                 key={slotKey}
-                onClick={() => setSearchOpen(true)}
                 onDragOver={(e) => {
                   if (!draggedId) return;
                   e.preventDefault();
@@ -706,11 +747,36 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                   e.preventDefault();
                   handleDropOnEmpty(pageIndex);
                 }}
-                aria-label="Mover carta pra este espaço ou adicionar carta"
-                className={`aspect-[5/7] rounded-lg border-2 border-dashed transition-colors hover:border-orange hover:bg-orange/5 ${
+                className={`group/slot relative flex aspect-[5/7] items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
                   dragOverId === slotKey ? "border-orange-deep bg-orange/10" : "border-ink/10"
                 }`}
-              />
+              >
+                {uploadingSlot === pageIndex && firstEmpty ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-ink-muted" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 opacity-0 transition-opacity group-hover/slot:opacity-100">
+                    <button
+                      onClick={() => setSearchOpen(true)}
+                      className="rounded-full bg-orange-deep px-2.5 py-1 text-[10px] font-bold text-white"
+                    >
+                      + Carta
+                    </button>
+                    <label className="cursor-pointer rounded-full border-2 border-ink/15 bg-surface px-2.5 py-1 text-[10px] font-bold text-ink hover:bg-surface-alt">
+                      + Imagem
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleAddImage(f, pageIndex);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
             );
           })}
         </motion.div>

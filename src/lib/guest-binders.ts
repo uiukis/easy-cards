@@ -10,6 +10,7 @@ export type GuestCard = {
   image_url: string;
   rarity: string | null;
   types: string | null;
+  is_image?: boolean;
 };
 
 export type GuestBinder = {

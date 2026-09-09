@@ -102,5 +102,6 @@ export type BinderCard = {
   span_cols: number;
   rarity: string | null;
   types: string | null;
+  is_image: boolean;
   created_at: string;
 };

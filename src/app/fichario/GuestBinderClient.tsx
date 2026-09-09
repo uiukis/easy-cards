@@ -13,9 +13,11 @@ import {
   Pencil,
   Check,
   Printer,
+  Loader2,
 } from "lucide-react";
 import type { SearchResult } from "@/app/admin/cartas/CardSearch";
 import type { GuestBinder, GuestCard } from "@/lib/guest-binders";
+import { uploadBinderImage } from "@/lib/binder-image";
 import { AddCardsDialog } from "./AddCardsDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +73,7 @@ export function GuestBinderClient({
   const [page, setPage] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [editingLabelPage, setEditingLabelPage] = useState<number | null>(null);
   const [labelDraft, setLabelDraft] = useState("");
@@ -124,6 +127,39 @@ export function GuestBinderClient({
 
   function handleRemove(id: string) {
     setCards(binder.cards.filter((c) => c.id !== id));
+  }
+
+  async function handleAddImage(file: File) {
+    setUploading(true);
+    try {
+      const url = await uploadBinderImage(file);
+      const slot: GuestCard = {
+        id:
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `c_${Date.now()}`,
+        tcg_api_id: null,
+        name: "Imagem",
+        set_name: null,
+        card_number: null,
+        image_url: url,
+        rarity: null,
+        types: null,
+        is_image: true,
+      };
+      if (pageCards.length < cardsPerPage) {
+        const at = safePage * cardsPerPage + pageCards.length;
+        const next = [...binder.cards];
+        next.splice(at, 0, slot);
+        setCards(next);
+      } else {
+        setCards([...binder.cards, slot]);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Não deu pra enviar a imagem.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   function moveCard(sourceId: string, targetIndex: number) {
@@ -352,9 +388,8 @@ export function GuestBinderClient({
             ))}
 
             {Array.from({ length: emptySlots }).map((_, i) => (
-              <button
+              <div
                 key={`empty-${i}`}
-                onClick={() => setSearchOpen(true)}
                 onDragOver={(e) => {
                   if (!draggedId) return;
                   e.preventDefault();
@@ -365,11 +400,36 @@ export function GuestBinderClient({
                   e.preventDefault();
                   handleDropOnEmpty();
                 }}
-                aria-label="Adicionar ou mover carta aqui"
-                className={`aspect-[5/7] rounded-lg border-2 border-dashed transition-colors hover:border-orange hover:bg-orange/5 ${
+                className={`group/slot relative flex aspect-[5/7] items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
                   dragOverId === `empty-${i}` ? "border-orange-deep bg-orange/10" : "border-ink/10"
                 }`}
-              />
+              >
+                {uploading && i === 0 ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-ink-muted" />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 opacity-0 transition-opacity group-hover/slot:opacity-100">
+                    <button
+                      onClick={() => setSearchOpen(true)}
+                      className="rounded-full bg-orange-deep px-2.5 py-1 text-[10px] font-bold text-white"
+                    >
+                      + Carta
+                    </button>
+                    <label className="cursor-pointer rounded-full border-2 border-ink/15 bg-surface px-2.5 py-1 text-[10px] font-bold text-ink hover:bg-surface-alt">
+                      + Imagem
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) handleAddImage(f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
             ))}
           </motion.div>
 

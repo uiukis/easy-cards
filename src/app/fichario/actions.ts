@@ -306,6 +306,49 @@ export async function addManyToBinder(
   return { ids: newIds };
 }
 
+export async function addImageSlot(binderId: string, imageUrl: string, atIndex?: number) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const { data: existing } = await supabase
+    .from("binder_cards")
+    .select("id, position")
+    .eq("binder_id", binderId)
+    .order("position", { ascending: true });
+  const ordered = existing ?? [];
+  const insertAt = atIndex == null ? ordered.length : Math.max(0, Math.min(atIndex, ordered.length));
+
+  const { data, error } = await supabase
+    .from("binder_cards")
+    .insert({
+      user_id: user.id,
+      binder_id: binderId,
+      name: "Imagem",
+      image_url: imageUrl,
+      is_image: true,
+      position: ordered.length,
+    })
+    .select("id")
+    .single();
+  if (error) throw new Error(error.message);
+
+  const finalOrder = [
+    ...ordered.slice(0, insertAt).map((r) => r.id as string),
+    data.id as string,
+    ...ordered.slice(insertAt).map((r) => r.id as string),
+  ];
+  await Promise.all(
+    finalOrder.map((id, position) =>
+      supabase.from("binder_cards").update({ position }).eq("id", id).eq("binder_id", binderId)
+    )
+  );
+  revalidatePath("/fichario");
+  return { id: data.id as string };
+}
+
 export async function removeFromBinder(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("binder_cards").delete().eq("id", id);
