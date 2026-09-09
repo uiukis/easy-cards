@@ -106,6 +106,56 @@ export async function importWantedFromBinders() {
   return addWishlistItems(items);
 }
 
+export async function addTradeItems(items: NewWishlistItem[]) {
+  if (items.length === 0) return { added: 0 };
+  const { supabase, user } = await requireUser();
+  const { data: existing } = await supabase
+    .from("trade_items")
+    .select("tcg_api_id, name, card_number")
+    .eq("user_id", user.id);
+  const seen = new Set(
+    (existing ?? []).map((e) => e.tcg_api_id || `${e.name}|${e.card_number ?? ""}`)
+  );
+  const rows = items
+    .filter((c) => {
+      const key = c.tcg_api_id || `${c.name}|${c.card_number ?? ""}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((c) => ({
+      user_id: user.id,
+      tcg_api_id: c.tcg_api_id,
+      name: c.name,
+      set_name: c.set_name,
+      card_number: c.card_number,
+      image_url: c.image_url,
+      rarity: c.rarity,
+    }));
+  if (rows.length === 0) return { added: 0 };
+  const { error } = await supabase.from("trade_items").insert(rows);
+  if (error) throw new Error(error.message);
+  revalidatePath("/lista-de-desejos");
+  return { added: rows.length };
+}
+
+export async function updateTradeItem(id: string, patch: { note?: string | null; condition?: string | null }) {
+  const { supabase } = await requireUser();
+  const clean: Record<string, unknown> = {};
+  if (patch.note !== undefined) clean.note = patch.note?.trim() || null;
+  if (patch.condition !== undefined) clean.condition = patch.condition || null;
+  const { error } = await supabase.from("trade_items").update(clean).eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/lista-de-desejos");
+}
+
+export async function removeTradeItem(id: string) {
+  const { supabase } = await requireUser();
+  const { error } = await supabase.from("trade_items").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/lista-de-desejos");
+}
+
 function makeSlug() {
   const alphabet = "abcdefghijkmnpqrstuvwxyz23456789";
   let s = "";

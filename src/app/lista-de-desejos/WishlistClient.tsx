@@ -15,6 +15,8 @@ import {
   Download,
   Pencil,
   ChevronDown,
+  Repeat2,
+  ArrowRight,
 } from "lucide-react";
 import type { WishlistItem } from "@/lib/supabase/types";
 import type { SearchResult } from "@/app/admin/cartas/CardSearch";
@@ -49,11 +51,13 @@ export function WishlistClient({
   isPublic,
   shareSlug,
   wantedInBinders,
+  tradeCount = 0,
 }: {
   initialItems: WishlistItem[];
   isPublic: boolean;
   shareSlug: string | null;
   wantedInBinders: number;
+  tradeCount?: number;
 }) {
   const [items, setItems] = useState(initialItems);
   const [addOpen, setAddOpen] = useState(false);
@@ -211,6 +215,18 @@ export function WishlistClient({
           Puxar {wantedInBinders} carta(s) marcada(s) como “Quero” nos meus fichários
         </button>
       )}
+
+      <Link
+        href="/tenho-pra-troca"
+        className="mt-3 flex items-center justify-between gap-2 rounded-xl border-2 border-teal/40 bg-teal/5 px-3 py-2.5 text-sm font-bold text-teal hover:bg-teal/10"
+      >
+        <span className="flex items-center gap-2">
+          <Repeat2 className="h-4 w-4" />
+          Tenho pra troca
+          {tradeCount > 0 && <span className="text-xs font-normal">({tradeCount})</span>}
+        </span>
+        <ArrowRight className="h-4 w-4" />
+      </Link>
 
       {/* list */}
       {active.length === 0 ? (

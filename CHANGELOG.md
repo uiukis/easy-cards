@@ -1,9 +1,16 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.34.0**.
+Datas no fuso de Brasília. Versão atual: **1.35.0**.
 
 ---
+
+## 1.35.0 — Tenho pra troca · 09/09/2026
+
+- **"Tenho pra troca"** (`/tenho-pra-troca`) — liste as cartas repetidas que você topa trocar. Aparecem no seu perfil público (`/u/<user>`) junto da lista de desejo.
+- **Feed de match de troca** — a página cruza automaticamente: "alguém tem o que você quer" e "alguém quer o que você tem", com link direto pro perfil da pessoa.
+- Atalho pra "Tenho pra troca" na lista de desejo e no menu do celular.
+- SEO: sitemap, robots.txt e dados estruturados da organização (Google).
 
 ## 1.34.0 — Prioridades P1 do roadmap · 09/09/2026
 

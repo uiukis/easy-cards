@@ -19,6 +19,16 @@ type PublicItem = {
   note: string | null;
 };
 
+type PublicTrade = {
+  id: string;
+  name: string;
+  set_name: string | null;
+  card_number: string | null;
+  image_url: string;
+  condition: string | null;
+  note: string | null;
+};
+
 type PublicWishlist = {
   name: string | null;
   username: string | null;
@@ -27,6 +37,7 @@ type PublicWishlist = {
   avatar: string | null;
   pokemon: string | null;
   items: PublicItem[];
+  trades: PublicTrade[];
 };
 
 const PRIORITY_LABEL: Record<number, string> = {
@@ -124,11 +135,11 @@ export default async function PublicWishlistPage({
           Falar no grupo da Easy Cards
         </a>
 
-        {data.items.length === 0 ? (
+        {data.items.length === 0 && data.trades.length === 0 ? (
           <p className="mt-10 rounded-2xl border-2 border-dashed border-ink/15 bg-surface/60 p-6 text-center text-sm text-ink-muted">
             {who} ainda não listou nenhuma carta.
           </p>
-        ) : (
+        ) : data.items.length === 0 ? null : (
           <div className="mt-8 space-y-7">
             {groups.map((g) => (
               <div key={g.p}>
@@ -166,6 +177,40 @@ export default async function PublicWishlistPage({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {data.trades.length > 0 && (
+          <div className="mt-10">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-teal">
+              Tenho pra troca · {data.trades.length}
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {data.trades.map((t) => (
+                <div
+                  key={t.id}
+                  className="overflow-hidden rounded-2xl border-2 border-ink/10 bg-surface"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
+                  <img src={t.image_url} alt={t.name} className="aspect-[5/7] w-full object-cover" />
+                  <div className="p-2.5">
+                    <p className="truncate text-xs font-semibold text-ink">
+                      {t.name}
+                      {t.card_number && (
+                        <span className="ml-1 font-normal text-ink-muted">{t.card_number}</span>
+                      )}
+                    </p>
+                    {t.set_name && (
+                      <p className="truncate text-[11px] text-ink-muted">{t.set_name}</p>
+                    )}
+                    {t.condition && (
+                      <p className="text-[11px] text-ink-muted">{t.condition}</p>
+                    )}
+                    {t.note && <p className="mt-1 text-[11px] text-ink-muted">“{t.note}”</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

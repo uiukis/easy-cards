@@ -11,25 +11,27 @@ export default async function ListaDeDesejosPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/lista-de-desejos");
 
-  const [{ data: items }, { data: profile }, { count: wantedInBinders }] = await Promise.all([
-    supabase
-      .from("wishlist_items")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("priority", { ascending: true })
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("profiles")
-      .select("wishlist_public, share_slug, username")
-      .eq("id", user.id)
-      .single(),
-    supabase
-      .from("binder_cards")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .eq("want", true)
-      .eq("is_image", false),
-  ]);
+  const [{ data: items }, { data: profile }, { count: wantedInBinders }, { count: tradeCount }] =
+    await Promise.all([
+      supabase
+        .from("wishlist_items")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("priority", { ascending: true })
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("profiles")
+        .select("wishlist_public, share_slug, username")
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("binder_cards")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("want", true)
+        .eq("is_image", false),
+      supabase.from("trade_items").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+    ]);
 
   return (
     <main className="bg-halftone min-h-screen bg-bg px-5 py-10 sm:px-8">
@@ -40,6 +42,7 @@ export default async function ListaDeDesejosPage() {
           isPublic={profile?.wishlist_public ?? false}
           shareSlug={profile?.username ?? profile?.share_slug ?? null}
           wantedInBinders={wantedInBinders ?? 0}
+          tradeCount={tradeCount ?? 0}
         />
       </div>
     </main>
