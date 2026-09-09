@@ -40,6 +40,14 @@ import { uploadBinderImage } from "@/lib/binder-image";
 import type { SearchResult } from "@/app/admin/cartas/CardSearch";
 import { AddCardsDialog } from "../AddCardsDialog";
 import { BinderCover, CoverToggleHint } from "../BinderCover";
+import { HoloShine } from "@/components/HoloShine";
+
+function holoKind(variant: string | null): "holo" | "reverse" | "special" | null {
+  if (variant === "holo") return "holo";
+  if (variant === "reverse_holo") return "reverse";
+  if (variant === "first_edition") return "special";
+  return null;
+}
 import {
   addManyToBinder,
   addImageSlot,
@@ -827,6 +835,10 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                   card.want && !card.is_image ? "opacity-45 saturate-50" : ""
                 }`}
               />
+
+              {!card.is_image && holoKind(card.variant) && (
+                <HoloShine kind={holoKind(card.variant)!} />
+              )}
 
               {card.want && !card.is_image && (
                 <span className="pointer-events-none absolute left-0 top-2 bg-orange-deep px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
