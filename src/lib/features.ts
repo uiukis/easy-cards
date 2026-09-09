@@ -9,6 +9,6 @@ export const PRICES_ENABLED = false;
 export const BINDER_LIMITS = {
   /** signed-in accounts */
   user: 5,
-  /** guest / not signed in (no guest binders yet — reserved for when there are) */
-  guest: 2,
+  /** guest / not signed in — one taste, then create an account */
+  guest: 1,
 } as const;

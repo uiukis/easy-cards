@@ -80,8 +80,8 @@ export function GuestFichario() {
             MEUS FICHÁRIOS
           </h1>
           <p className="mt-1 text-sm text-ink-muted">
-            {binders.length}/{GUEST_BINDER_LIMIT} como convidado — crie uma conta pra ter mais e
-            salvar de verdade.
+            Como convidado você monta {GUEST_BINDER_LIMIT === 1 ? "1 fichário" : `${GUEST_BINDER_LIMIT} fichários`} pra
+            experimentar. Crie uma conta pra ter até 5 e salvar de verdade.
           </p>
         </div>
         <Button onClick={() => setCreating(true)} disabled={binders.length >= GUEST_BINDER_LIMIT}>
@@ -92,10 +92,14 @@ export function GuestFichario() {
 
       {binders.length >= GUEST_BINDER_LIMIT && (
         <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border-2 border-orange/30 bg-orange/10 px-3 py-2 text-xs text-ink">
-          <span className="font-semibold text-orange-deep">Chegou no limite de convidado.</span>
-          <span className="text-ink-muted">Com conta você tem até 5 e eles ficam salvos de verdade.</span>
+          <span className="font-semibold text-orange-deep">
+            Esse é o seu fichário de convidado.
+          </span>
+          <span className="text-ink-muted">
+            Quer outro? Crie uma conta — são grátis, até 5, e ficam salvos de verdade.
+          </span>
           <Link href="/cadastro?next=/fichario" className="font-bold text-primary hover:underline">
-            Criar conta grátis →
+            Criar conta →
           </Link>
         </div>
       )}

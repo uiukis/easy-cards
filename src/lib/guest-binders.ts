@@ -31,7 +31,7 @@ export type GuestBinder = {
 };
 
 const KEY = "easycards.guestBinders.v1";
-export const GUEST_BINDER_LIMIT = 2;
+export const GUEST_BINDER_LIMIT = 1;
 
 export function loadGuestBinders(): GuestBinder[] {
   try {
