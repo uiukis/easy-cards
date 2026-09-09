@@ -69,6 +69,73 @@ export async function createBinder(input: {
   return binder;
 }
 
+export type GuestBinderPayload = {
+  name: string;
+  description: string | null;
+  grid_size: string;
+  page_labels: Record<string, string>;
+  cards: {
+    tcg_api_id: string | null;
+    name: string;
+    set_name: string | null;
+    card_number: string | null;
+    image_url: string;
+    rarity: string | null;
+    types: string | null;
+  }[];
+};
+
+export async function importGuestBinders(guests: GuestBinderPayload[]) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const { count } = await supabase
+    .from("binders")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  const room = Math.max(0, BINDER_LIMITS.user - (count ?? 0));
+  const toImport = guests.slice(0, room);
+
+  for (const g of toImport) {
+    const { data: binder, error } = await supabase
+      .from("binders")
+      .insert({
+        user_id: user.id,
+        name: g.name || "Meu Fichário",
+        description: g.description,
+        grid_size: g.grid_size || "3x3",
+        page_labels: g.page_labels ?? {},
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+
+    if (g.cards.length > 0) {
+      const rows = g.cards.map((c, i) => ({
+        user_id: user.id,
+        binder_id: binder.id,
+        tcg_api_id: c.tcg_api_id,
+        name: c.name,
+        set_name: c.set_name,
+        card_number: c.card_number,
+        image_url: c.image_url,
+        rarity: c.rarity,
+        types: c.types,
+        position: i,
+      }));
+      const { error: cardsErr } = await supabase.from("binder_cards").insert(rows);
+      if (cardsErr) throw new Error(cardsErr.message);
+    }
+  }
+
+  revalidatePath("/fichario");
+  return { imported: toImport.length, skipped: guests.length - toImport.length };
+}
+
 export async function updateBinderDescription(id: string, description: string) {
   const supabase = await createClient();
   const { error } = await supabase

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 
 const API_BASE = "https://api.pokemontcg.io/v2";
 
@@ -28,13 +27,6 @@ async function fetchWithRetries(url: string, attempts = 4) {
 }
 
 export async function GET() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
 
   try {
     const res = await fetchWithRetries(`${API_BASE}/sets?orderBy=-releaseDate&pageSize=250`);

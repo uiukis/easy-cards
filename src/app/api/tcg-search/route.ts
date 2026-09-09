@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 
 // The Pokémon TCG API's own marketing site (pokemontcg.io) now redirects to
 // a paid product (Scrydex), but the underlying API + image CDN it left
@@ -37,15 +36,6 @@ function quote(v: string) {
 }
 
 export async function GET(request: Request) {
-  // Logged-in only: this proxies a third-party API through our server, so it
-  // shouldn't be an open relay for anyone on the internet.
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim() ?? "";

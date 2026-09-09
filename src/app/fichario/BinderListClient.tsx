@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
-import { Plus, BookOpen, Trash2, Loader2 } from "lucide-react";
+import { Plus, BookOpen, Trash2, Loader2, DownloadCloud } from "lucide-react";
 import type { Binder } from "@/lib/supabase/types";
 import { BINDER_LIMITS } from "@/lib/features";
+import { loadGuestBinders, clearGuestBinders, type GuestBinder } from "@/lib/guest-binders";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { NewBinderDialog } from "./NewBinderDialog";
-import { deleteBinder } from "./actions";
+import { deleteBinder, importGuestBinders } from "./actions";
 
 export type BinderWithPreview = Binder & {
   cardCount: number;
@@ -17,10 +19,50 @@ export type BinderWithPreview = Binder & {
 };
 
 export function BinderListClient({ initial }: { initial: BinderWithPreview[] }) {
+  const router = useRouter();
   const [binders, setBinders] = useState(initial);
   const [newOpen, setNewOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [guests, setGuests] = useState<GuestBinder[]>([]);
+  const [importing, setImporting] = useState(false);
+
+  useEffect(() => {
+    queueMicrotask(() => setGuests(loadGuestBinders()));
+  }, []);
+
+  async function handleImport() {
+    setImporting(true);
+    try {
+      await importGuestBinders(
+        guests.map((g) => ({
+          name: g.name,
+          description: g.description,
+          grid_size: g.grid_size,
+          page_labels: g.page_labels ?? {},
+          cards: g.cards.map((c) => ({
+            tcg_api_id: c.tcg_api_id,
+            name: c.name,
+            set_name: c.set_name,
+            card_number: c.card_number,
+            image_url: c.image_url,
+            rarity: c.rarity,
+            types: c.types,
+          })),
+        }))
+      );
+      clearGuestBinders();
+      setGuests([]);
+      router.refresh();
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function dismissGuests() {
+    clearGuestBinders();
+    setGuests([]);
+  }
 
   async function handleDelete(id: string) {
     setDeletingId(id);
@@ -53,6 +95,26 @@ export function BinderListClient({ initial }: { initial: BinderWithPreview[] }) 
           Novo fichário
         </Button>
       </div>
+
+      {guests.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border-2 border-orange/30 bg-orange/10 px-4 py-3 text-sm">
+          <DownloadCloud className="h-4 w-4 shrink-0 text-orange-deep" />
+          <span className="min-w-0 flex-1 text-ink">
+            Você montou {guests.length} {guests.length === 1 ? "fichário" : "fichários"} como
+            convidado. Quer trazer {guests.length === 1 ? "ele" : "eles"} pra sua conta?
+          </span>
+          <Button size="sm" onClick={handleImport} disabled={importing}>
+            {importing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Importar
+          </Button>
+          <button
+            onClick={dismissGuests}
+            className="text-xs font-semibold text-ink-muted hover:text-ink"
+          >
+            descartar
+          </button>
+        </div>
+      )}
 
       {atLimit && (
         <p className="mt-3 rounded-xl border-2 border-ink/10 bg-surface-alt px-3 py-2 text-xs text-ink-muted">

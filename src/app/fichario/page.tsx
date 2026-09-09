@@ -3,7 +3,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { CustomerNav } from "@/components/CustomerNav";
 import { BinderListClient, type BinderWithPreview } from "./BinderListClient";
-import { FicharioGate } from "./FicharioGate";
+import { GuestFichario } from "./GuestFichario";
 
 export default async function FicharioListPage() {
   const supabase = await createClient();
@@ -15,8 +15,8 @@ export default async function FicharioListPage() {
     return (
       <>
         <Navbar />
-        <main className="bg-halftone min-h-screen bg-bg px-5 py-14 sm:px-8">
-          <FicharioGate />
+        <main className="bg-halftone min-h-screen bg-bg px-5 py-10 sm:px-8">
+          <GuestFichario />
         </main>
         <Footer />
       </>
