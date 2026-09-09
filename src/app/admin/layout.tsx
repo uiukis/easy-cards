@@ -27,7 +27,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, role")
+    .select("full_name, role, favorite_pokemon_sprite")
     .eq("id", user.id)
     .single();
 
@@ -53,6 +53,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         fullName={profile.full_name ?? ""}
         roleLabel={roleLabel}
         version={packageJson.version}
+        avatarSprite={profile.favorite_pokemon_sprite}
       />
 
       <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 md:px-10">{children}</main>

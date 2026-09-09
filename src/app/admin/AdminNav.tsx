@@ -20,6 +20,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PokemonAvatar } from "@/components/PokemonAvatar";
 import { LogoutButton } from "./LogoutButton";
 
 const ICONS: Record<string, LucideIcon> = {
@@ -90,15 +91,22 @@ function Footer({
   fullName,
   roleLabel,
   version,
+  avatarSprite,
 }: {
   fullName: string;
   roleLabel: string;
   version: string;
+  avatarSprite: string | null;
 }) {
   return (
     <div className="mt-6 border-t-2 border-ink/10 pt-4">
-      <p className="truncate px-1 text-xs font-semibold text-ink">{fullName}</p>
-      <p className="px-1 text-[11px] text-ink-muted">{roleLabel}</p>
+      <div className="flex items-center gap-2 px-1">
+        <PokemonAvatar sprite={avatarSprite} name={fullName} size={34} />
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold text-ink">{fullName}</p>
+          <p className="text-[11px] text-ink-muted">{roleLabel}</p>
+        </div>
+      </div>
       <div className="mt-2 flex items-center gap-2">
         <LogoutButton className="flex-1 justify-start" />
         <ThemeToggle />
@@ -113,11 +121,13 @@ export function AdminNav({
   fullName,
   roleLabel,
   version,
+  avatarSprite,
 }: {
   items: AdminNavItem[];
   fullName: string;
   roleLabel: string;
   version: string;
+  avatarSprite: string | null;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -184,7 +194,7 @@ export function AdminNav({
                 <NavLinks items={items} isActive={isActive} onNavigate={() => setOpen(false)} />
               </nav>
 
-              <Footer fullName={fullName} roleLabel={roleLabel} version={version} />
+              <Footer fullName={fullName} roleLabel={roleLabel} version={version} avatarSprite={avatarSprite} />
             </motion.div>
           </>
         )}
@@ -207,7 +217,7 @@ export function AdminNav({
           <NavLinks items={items} isActive={isActive} />
         </nav>
 
-        <Footer fullName={fullName} roleLabel={roleLabel} version={version} />
+        <Footer fullName={fullName} roleLabel={roleLabel} version={version} avatarSprite={avatarSprite} />
       </aside>
     </>
   );

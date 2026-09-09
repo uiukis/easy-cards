@@ -6,6 +6,7 @@ export type Profile = {
   phone: string | null;
   role: UserRole;
   favorite_pokemon: string | null;
+  favorite_pokemon_sprite: string | null;
   created_at: string;
 };
 

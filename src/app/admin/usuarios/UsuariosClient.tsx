@@ -5,6 +5,7 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import type { Profile, UserRole } from "@/lib/supabase/types";
 import { updateUserRole } from "./actions";
 import { AdminPageHeader } from "@/components/AdminPageHeader";
+import { PokemonAvatar } from "@/components/PokemonAvatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -71,7 +72,8 @@ export function UsuariosClient({
             key={p.id}
             className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-border bg-surface p-3"
           >
-            <div className="min-w-0 flex-1 basis-40">
+            <PokemonAvatar sprite={p.favorite_pokemon_sprite} name={p.full_name} size={36} />
+            <div className="min-w-0 flex-1 basis-32">
               <p className="truncate text-sm font-semibold text-ink">
                 {p.full_name || "—"}
                 {p.id === currentUserId && (
