@@ -1,9 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Luckiest_Guy, Bangers, Inter } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { themeInitScript } from "@/lib/theme-store";
 import { cn } from "@/lib/utils";
+import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 
 const luckiestGuy = Luckiest_Guy({
   variable: "--font-luckiest",
@@ -41,6 +42,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
   },
+  appleWebApp: { capable: true, title: "Easy Cards", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fbf1df" },
+    { media: "(prefers-color-scheme: dark)", color: "#241a11" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -55,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
       <body className="min-h-full flex flex-col bg-bg text-ink font-sans">
         {children}
+        <ServiceWorkerRegister />
         <Analytics />
       </body>
     </html>

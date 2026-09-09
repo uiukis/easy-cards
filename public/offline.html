@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Sem conexão — Easy Cards</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    background: #fbf1df;
+    color: #1c1710;
+    font-family: system-ui, -apple-system, sans-serif;
+    text-align: center;
+    padding: 2rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #241a11; color: #f6efe3; }
+  }
+  img { width: 84px; height: 84px; border-radius: 999px; }
+  h1 { font-size: 1.4rem; margin: 1.25rem 0 0.4rem; }
+  p { color: #786d59; max-width: 22rem; }
+  @media (prefers-color-scheme: dark) { p { color: #c2a992; } }
+  button {
+    margin-top: 1.25rem;
+    border: 0;
+    background: #d9660b;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.7rem 1.4rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div>
+    <img src="/icon-192.png" alt="Easy Cards" />
+    <h1>Você tá sem internet</h1>
+    <p>O Easy Cards precisa de conexão pra carregar essa página. Assim que voltar, é só tentar de novo.</p>
+    <button onclick="location.reload()">Tentar de novo</button>
+  </div>
+</body>
+</html>
