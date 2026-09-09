@@ -1,7 +1,7 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.26.0**.
+Datas no fuso de Brasília. Versão atual: **1.27.0**.
 
 ---
 
@@ -9,11 +9,14 @@ Datas no fuso de Brasília. Versão atual: **1.26.0**.
 
 - Revertido o campo "telefone ou email" no login — voltou a ser só telefone. Email fica só como dado de recuperação/aviso na conta.
 
+## 1.27.0 — Animação sem travar · 09/09/2026
+
+- Tirado o "scroll suave" (Lenis) — tava travando, principalmente no celular. Voltou pra rolagem nativa (que no celular já é suave).
+- **Parallax no topo** ficou leve: só no computador, só transform (roda na GPU), desligado se o sistema pede menos animação.
+
 ## 1.25.0 — Rolagem suave + parallax · 09/09/2026
 
-- **Scroll suave** nas páginas públicas — aquela rolagem com inércia.
-- **Parallax no topo** — o sol, as cartas do fundo e as flutuantes se movem em velocidades diferentes quando você rola, e o conteúdo some suave.
-- Seções aparecem quando entram na tela, com um leve overshoot.
+- (Revertido na 1.27.0 — travava.) Scroll com inércia + parallax pesado.
 
 ## 1.24.0 — Brilho holográfico ✨ · 09/09/2026
 
