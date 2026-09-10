@@ -34,13 +34,17 @@ export function ImportLeilaoDialog({
   const [soldDate, setSoldDate] = useState(today);
   const [dueDate, setDueDate] = useState("");
 
-  async function analyze() {
+  async function analyze(merge = false) {
     setAnalyzing(true);
     setErr(null);
     try {
       const res = await parseAndMatch(text);
-      setRows(res);
-      setSkip(new Set());
+      setRows((prev) => {
+        if (!merge || !prev) return res;
+        // keep what we already matched, fill in the ones that just resolved
+        return res.map((r, i) => (prev[i]?.match ? prev[i] : r));
+      });
+      if (!merge) setSkip(new Set());
       if (!label) {
         const d = new Date(soldDate);
         setLabel(`Leilão ${d.getUTCDate()}/${d.getUTCMonth() + 1}`);
@@ -129,7 +133,11 @@ export function ImportLeilaoDialog({
               className="font-mono text-xs"
             />
             {err && <p className="text-sm text-destructive">{err}</p>}
-            <Button onClick={analyze} disabled={analyzing || text.trim().length < 3} className="w-full">
+            <Button
+              onClick={() => analyze(false)}
+              disabled={analyzing || text.trim().length < 3}
+              className="w-full"
+            >
               {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
               Analisar {text.trim() ? `(${text.trim().split(/\r?\n/).filter(Boolean).length} linhas)` : ""}
             </Button>
@@ -152,11 +160,20 @@ export function ImportLeilaoDialog({
             </div>
 
             {unmatched > 0 && (
-              <p className="flex items-center gap-1.5 rounded-lg bg-orange-deep/10 p-2 text-xs text-orange-deep">
+              <div className="flex flex-wrap items-center gap-2 rounded-lg bg-orange-deep/10 p-2 text-xs text-orange-deep">
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                {unmatched} carta(s) sem arte encontrada — entram assim mesmo, só sem imagem. Dá pra
-                arrumar depois no catálogo.
-              </p>
+                <span className="flex-1">
+                  {unmatched} carta(s) sem arte — entram assim mesmo, só sem imagem (a API do TCG
+                  falha às vezes; tenta de novo).
+                </span>
+                <button
+                  onClick={() => analyze(true)}
+                  disabled={analyzing}
+                  className="shrink-0 rounded-full border border-orange-deep/40 px-2 py-0.5 font-bold hover:bg-orange-deep/10 disabled:opacity-50"
+                >
+                  {analyzing ? "..." : "Tentar de novo"}
+                </button>
+              </div>
             )}
 
             <div className="max-h-[45vh] overflow-y-auto rounded-xl border-2 border-ink/10">

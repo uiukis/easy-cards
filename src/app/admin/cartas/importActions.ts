@@ -108,34 +108,40 @@ function parseRows(text: string): ParsedRow[] {
     if (/^(nome|comprador|carta|lista de cartas|leil[aã]o|vendas|faturamento)\b/i.test(line)) continue;
     if (/^dia\s+\d/i.test(line)) continue;
 
-    let cells = splitCells(line).filter((c, i) => c !== "" || i > 0);
-    cells = cells.map((c) => c.trim());
-    const nonEmpty = cells.filter(Boolean);
-    if (nonEmpty.length < 2) continue;
+    const cells = splitCells(line).map((c) => c.trim());
+    if (cells.filter(Boolean).length < 2) continue;
 
-    // Sheet layout: Nome | (FOTO) | Nome/Numeração | Valor | Pagamento | Obs
-    let buyer = "";
-    let cardText = "";
-    let priceCell = "";
-    let statusCell = "";
-    let notes = "";
+    // Locate columns by shape rather than fixed position, so both the sheet's
+    // "Nome | FOTO | Carta | Valor | Pagamento | Obs" and a trimmed
+    // "Comprador | Carta | Valor | Pagamento" paste work.
+    const looksPrice = (c: string) =>
+      /gratu|gr[aá]tis|free|brinde/i.test(c) || /^r?\$?\d[\d.,]*$/i.test(c.replace(/\s/g, ""));
+    const looksStatus = (c: string) => /^(x|aberto|parcial|efetuad[oa]|pago|quitad[oa])$/i.test(c.trim());
+    const looksCard = (c: string) => /[a-zà-ú]{3,}/i.test(c) && !looksPrice(c) && !looksStatus(c);
 
-    if (cells.length >= 5) {
-      buyer = cells[0];
-      cardText = cells[2] || cells[1];
-      priceCell = cells[3];
-      statusCell = cells[4];
-      notes = cells.slice(5).join(" ").trim();
-    } else {
-      // compact: Buyer | Card | Value | [Status] | [Obs]
-      buyer = nonEmpty[0];
-      cardText = nonEmpty[1] ?? "";
-      priceCell = nonEmpty[2] ?? "";
-      statusCell = nonEmpty[3] ?? "";
-      notes = nonEmpty.slice(4).join(" ").trim();
+    let priceIdx = cells.findIndex(looksPrice);
+    // a lone "menor valor"/"valor médio" cell isn't a price
+    if (priceIdx >= 0 && /valor/i.test(cells[priceIdx]) && !/r\$|\d/.test(cells[priceIdx])) {
+      priceIdx = cells.findIndex((c, i) => i > priceIdx && looksPrice(c));
     }
 
-    if (!cardText) continue;
+    let cardIdx = -1;
+    for (let i = (priceIdx > 0 ? priceIdx - 1 : cells.length - 1); i >= 0; i--) {
+      if (looksCard(cells[i])) {
+        cardIdx = i;
+        break;
+      }
+    }
+    if (cardIdx < 0) cardIdx = cells.findIndex(looksCard);
+    if (cardIdx < 0) continue;
+
+    const buyer = cells.find((c, i) => i !== cardIdx && c && looksCard(c)) ?? "";
+    const cardText = cells[cardIdx];
+    const priceCell = priceIdx >= 0 ? cells[priceIdx] : "";
+    const afterPrice = priceIdx >= 0 ? cells.slice(priceIdx + 1) : [];
+    const statusCell = afterPrice.find(looksStatus) ?? cells.find(looksStatus) ?? "";
+    const notes = afterPrice.filter((c) => c && !looksStatus(c)).join(" ").trim();
+
     const { price, free } = parsePrice(priceCell);
     const { name, number, printedTotal } = parseCard(cardText);
 
@@ -161,13 +167,13 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function tcgByName(name: string) {
+async function tcgByName(name: string): Promise<TcgCard[]> {
   const q = encodeURIComponent(`name:"${name.replace(/"/g, "")}"`);
-  for (let i = 0; i < 3; i++) {
-    if (i > 0) await sleep(300 * i);
+  for (let i = 0; i < 5; i++) {
+    if (i > 0) await sleep(500 * i + Math.random() * 400);
     try {
       const res = await fetch(`${API_BASE}/cards?q=${q}&pageSize=250`, {
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(8000),
       });
       if (res.ok) {
         const j = (await res.json()) as { data?: TcgCard[] };
@@ -177,7 +183,7 @@ async function tcgByName(name: string) {
       /* retry */
     }
   }
-  return [] as TcgCard[];
+  return [];
 }
 
 /** Run tasks with limited concurrency so a big paste doesn't take forever. */
@@ -211,7 +217,7 @@ export async function parseAndMatch(text: string): Promise<MatchedRow[]> {
 
   // one API call per distinct name, a few in flight at a time
   const names = [...new Set(rows.map((r) => r.name.toLowerCase()).filter((n) => n.length >= 3))];
-  const results = await mapLimit(names, 6, (n) => tcgByName(n));
+  const results = await mapLimit(names, 4, (n) => tcgByName(n));
   const pools = new Map<string, TcgCard[]>();
   names.forEach((n, i) => pools.set(n, results[i]));
 
