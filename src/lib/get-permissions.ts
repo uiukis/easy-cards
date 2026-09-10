@@ -9,7 +9,7 @@ export async function getEffectivePermissions(
   role: UserRole
 ): Promise<Permissions> {
   const [{ data: roleRows }, { data: userRows }] = await Promise.all([
-    supabase.from("role_permissions").select("permission_key, allowed"),
+    supabase.from("role_permissions").select("role, permission_key, allowed").eq("role", role),
     supabase.from("user_permissions").select("permission_key, allowed").eq("user_id", userId),
   ]);
   return resolvePermissions(role, roleRows ?? [], userRows ?? []);

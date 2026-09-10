@@ -37,3 +37,17 @@ export async function setCardOfWeek(value: CardOfWeek) {
   revalidatePath("/");
   revalidatePath("/admin/home");
 }
+
+/** Hrefs of homepage nav links to hide. */
+export async function setNavHidden(hidden: string[]) {
+  const supabase = await requireQuadro();
+  const { error } = await supabase
+    .from("site_settings")
+    .upsert(
+      { key: "nav_hidden", value: hidden, updated_at: new Date().toISOString() },
+      { onConflict: "key" }
+    );
+  if (error) throw new Error(error.message);
+  revalidatePath("/");
+  revalidatePath("/admin/home");
+}

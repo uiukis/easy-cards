@@ -7,25 +7,16 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { User, Menu, X } from "lucide-react";
 import { SITE } from "@/lib/site";
+import { SITE_NAV } from "@/lib/site-nav";
 import { createClient } from "@/lib/supabase/client";
 import { WhatsAppIcon, InstagramIcon } from "./icons";
 import { ThemeToggle } from "./ThemeToggle";
 import { Badge } from "@/components/ui/badge";
 
-const LINKS = [
-  { href: "/#sobre", label: "Sobre" },
-  { href: "/evento", label: "Evento" },
-  { href: "/leiloes", label: "Leilões" },
-  { href: "/#comunidade", label: "Comunidade" },
-  { href: "/imprensa", label: "Na mídia" },
-  { href: "/novidades", label: "Novidades" },
-  { href: "/cartas", label: "Cartas" },
-  { href: "/fichario", label: "Fichário", beta: true },
-];
-
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [shopOn, setShopOn] = useState(false);
+  const [hidden, setHidden] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -43,10 +34,14 @@ export function Navbar() {
   useEffect(() => {
     createClient()
       .from("site_settings")
-      .select("value")
-      .eq("key", "shop_enabled")
-      .maybeSingle()
-      .then(({ data }) => setShopOn(data?.value === true));
+      .select("key, value")
+      .in("key", ["shop_enabled", "nav_hidden"])
+      .then(({ data }) => {
+        for (const row of data ?? []) {
+          if (row.key === "shop_enabled") setShopOn(row.value === true);
+          if (row.key === "nav_hidden" && Array.isArray(row.value)) setHidden(row.value);
+        }
+      });
   }, []);
 
   useEffect(() => {
@@ -56,7 +51,10 @@ export function Navbar() {
     };
   }, [open]);
 
-  const links = shopOn ? [{ href: "/loja", label: "Loja" }, ...LINKS] : LINKS;
+  const visible = SITE_NAV.filter((l) => !hidden.includes(l.href));
+  const links: { href: string; label: string; beta?: boolean }[] = shopOn
+    ? [{ href: "/loja", label: "Loja" }, ...visible]
+    : visible;
 
   return (
     <motion.header

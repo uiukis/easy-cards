@@ -21,6 +21,7 @@ import {
   Gavel,
   Home,
   Bell,
+  BarChart3,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,7 @@ const ICONS: Record<string, LucideIcon> = {
   Gavel,
   Home,
   Bell,
+  BarChart3,
 };
 
 export type AdminNavItem = {

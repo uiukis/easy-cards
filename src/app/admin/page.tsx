@@ -156,7 +156,7 @@ export default async function AdminDashboard() {
       icon: Megaphone,
       className: "border-2 border-ink/15 bg-surface text-ink hover:bg-surface-alt",
     },
-    permissions.manage_users && {
+    permissions.view_users && {
       href: "/admin/usuarios",
       label: "Usuários",
       icon: Users,

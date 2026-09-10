@@ -29,20 +29,24 @@ const PERM_SHORT: Record<PermissionKey, string> = {
   view_finance: "Financeiro",
   manage_cards: "Cartas",
   manage_quadro: "Quadro",
-  manage_users: "Usuários",
+  view_users: "Ver usuários",
+  manage_users: "Verificar contas",
   view_wishlists: "Listas de desejo",
   manage_auctions: "Leilões",
+  view_analytics: "Analytics",
 };
 
 export function UsuariosClient({
   profiles,
   currentUserId,
   canEditRoles,
+  canManage,
   permsById,
 }: {
   profiles: Profile[];
   currentUserId: string;
   canEditRoles: boolean;
+  canManage: boolean;
   permsById: Record<string, PermissionKey[]>;
 }) {
   const [rows, setRows] = useState(profiles);
@@ -103,20 +107,24 @@ export function UsuariosClient({
         subtitle={
           canEditRoles
             ? "Controle quem é CTO, admin, equipe ou cliente."
-            : "Só o CTO pode alterar permissões de usuários."
+            : canManage
+              ? "Você pode ver a lista e verificar contas. Só o CTO altera cargos e permissões."
+              : "Você pode ver a lista. Verificar contas e mexer em cargos é com o CTO."
         }
       />
 
-      <div className="mt-4 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-ink">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-        <p>
-          O cadastro não confirma o número por SMS (é assim que fica de graça), então qualquer um pode
-          se cadastrar com qualquer número. Quando você tiver certeza de que a conta é da pessoa mesmo
-          (falou no grupo, comprou pessoalmente…), marca ela como{" "}
-          <span className="font-semibold">verificada</span> — o site passa a mostrar o nome completo
-          dela e um selo. Sem verificação, o perfil público mostra só o primeiro nome.
-        </p>
-      </div>
+      {canManage && (
+        <div className="mt-4 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-ink">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+          <p>
+            O cadastro não confirma o número por SMS (é assim que fica de graça), então qualquer um
+            pode se cadastrar com qualquer número. Quando você tiver certeza de que a conta é da
+            pessoa mesmo (falou no grupo, comprou pessoalmente…), marca ela como{" "}
+            <span className="font-semibold">verificada</span> — o site passa a mostrar o nome
+            completo dela e um selo. Sem verificação, o perfil público mostra só o primeiro nome.
+          </p>
+        </div>
+      )}
 
       <ul className="mt-6 space-y-2.5">
         {rows.map((p) => (
@@ -137,7 +145,11 @@ export function UsuariosClient({
                   <span className="text-xs font-normal text-ink-muted">(você)</span>
                 )}
               </p>
-              {phoneEditId === p.id ? (
+              {!canManage ? (
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  {p.phone ? maskPhoneBR(p.phone.replace(/^55/, "")) : "sem telefone"}
+                </p>
+              ) : phoneEditId === p.id ? (
                 <div className="mt-1 flex items-center gap-1.5">
                   <Input
                     autoFocus
@@ -181,23 +193,29 @@ export function UsuariosClient({
               )}
             </div>
             <div className="ml-auto flex shrink-0 items-center gap-2">
-              <button
-                onClick={() => toggleVerified(p.id, !p.verified_at)}
-                disabled={verifyBusy === p.id || p.id === currentUserId}
-                title={p.verified_at ? "Remover verificação" : "Marcar como verificado"}
-                className={`inline-flex items-center gap-1 rounded-full border-2 px-2.5 py-1 text-xs font-bold transition-colors disabled:opacity-40 ${
-                  p.verified_at
-                    ? "border-teal/40 bg-teal/10 text-teal hover:bg-teal/20"
-                    : "border-ink/15 text-ink-muted hover:border-teal hover:text-teal"
-                }`}
-              >
-                {verifyBusy === p.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <BadgeCheck className="h-3.5 w-3.5" />
-                )}
-                {p.verified_at ? "Verificado" : "Verificar"}
-              </button>
+              {canManage ? (
+                <button
+                  onClick={() => toggleVerified(p.id, !p.verified_at)}
+                  disabled={verifyBusy === p.id || p.id === currentUserId}
+                  title={p.verified_at ? "Remover verificação" : "Marcar como verificado"}
+                  className={`inline-flex items-center gap-1 rounded-full border-2 px-2.5 py-1 text-xs font-bold transition-colors disabled:opacity-40 ${
+                    p.verified_at
+                      ? "border-teal/40 bg-teal/10 text-teal hover:bg-teal/20"
+                      : "border-ink/15 text-ink-muted hover:border-teal hover:text-teal"
+                  }`}
+                >
+                  {verifyBusy === p.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <BadgeCheck className="h-3.5 w-3.5" />
+                  )}
+                  {p.verified_at ? "Verificado" : "Verificar"}
+                </button>
+              ) : (
+                <Badge variant={p.verified_at ? "secondary" : "outline"}>
+                  {p.verified_at ? "Verificado" : "Não verificado"}
+                </Badge>
+              )}
               {canEditRoles ? (
                 <>
                   <Select

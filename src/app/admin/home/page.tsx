@@ -21,11 +21,14 @@ export default async function AdminHomePage() {
   const permissions = await getEffectivePermissions(supabase, user.id, profile.role);
   if (!permissions.manage_quadro) redirect("/admin");
 
-  const { data } = await supabase
+  const { data: settings } = await supabase
     .from("site_settings")
-    .select("value")
-    .eq("key", "card_of_week")
-    .maybeSingle();
+    .select("key, value")
+    .in("key", ["card_of_week", "nav_hidden"]);
 
-  return <HomeClient initial={(data?.value ?? null) as CardOfWeek} />;
+  const cardOfWeek = settings?.find((s) => s.key === "card_of_week")?.value ?? null;
+  const navHiddenRaw = settings?.find((s) => s.key === "nav_hidden")?.value;
+  const navHidden = Array.isArray(navHiddenRaw) ? (navHiddenRaw as string[]) : [];
+
+  return <HomeClient initial={cardOfWeek as CardOfWeek} navHidden={navHidden} />;
 }

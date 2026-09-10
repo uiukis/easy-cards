@@ -6,8 +6,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getEffectivePermissions } from "@/lib/get-permissions";
 import type { UserRole } from "@/lib/supabase/types";
 
+/** Change someone's role. CTO only — this is how permissions are handed out. */
 export async function updateUserRole(id: string, role: UserRole) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const { data: me } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (me?.role !== "cto") throw new Error("Só o CTO pode alterar cargos.");
+
   const { error } = await supabase.from("profiles").update({ role }).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/usuarios");

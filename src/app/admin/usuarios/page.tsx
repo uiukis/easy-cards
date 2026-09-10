@@ -21,11 +21,11 @@ export default async function UsuariosPage() {
   if (!viewerProfile) redirect("/");
 
   const permissions = await getEffectivePermissions(supabase, user.id, viewerProfile.role);
-  if (!permissions.manage_users) redirect("/admin");
+  if (!permissions.view_users) redirect("/admin");
 
   const [{ data: profiles }, { data: roleRows }, { data: userRows }] = await Promise.all([
     supabase.from("profiles").select("*").order("created_at", { ascending: true }),
-    supabase.from("role_permissions").select("permission_key, allowed"),
+    supabase.from("role_permissions").select("role, permission_key, allowed"),
     supabase.from("user_permissions").select("user_id, permission_key, allowed"),
   ]);
 
@@ -42,6 +42,7 @@ export default async function UsuariosPage() {
       profiles={profiles ?? []}
       currentUserId={user.id}
       canEditRoles={viewerProfile.role === "cto"}
+      canManage={permissions.manage_users}
       permsById={permsById}
     />
   );

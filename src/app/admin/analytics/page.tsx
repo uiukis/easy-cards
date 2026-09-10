@@ -1,30 +1,42 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Users, Eye, Globe, Link2, Smartphone, Cpu, AppWindow, FileText } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { getEffectivePermissions } from "@/lib/get-permissions";
 import { getAnalyticsDashboard } from "@/lib/vercel-analytics";
+import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { DailyChart } from "./DailyChart";
 import { BreakdownCard } from "./BreakdownCard";
-
-export const metadata: Metadata = {
-  title: "Analytics — Easy Cards",
-  robots: { index: false, follow: false },
-};
 
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/admin/analytics");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (!profile) redirect("/");
+
+  const permissions = await getEffectivePermissions(supabase, user.id, profile.role);
+  if (!permissions.view_analytics) redirect("/admin");
+
   const { summary, daily, topPages, referrers, countries, devices, os, browsers } =
     await getAnalyticsDashboard();
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-5 py-16 sm:px-8">
-      <h1 className="font-display text-3xl text-ink sm:text-4xl">
-        ANALYTICS DA EASY CARDS
-      </h1>
-      <p className="mt-2 text-sm text-ink-muted">
-        Dados de visitas direto do Vercel Web Analytics — sem precisar abrir o painel da Vercel.
-      </p>
+    <div>
+      <AdminPageHeader
+        title="ANALYTICS"
+        subtitle="Visitas do site direto do Vercel Web Analytics."
+      />
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-3">
         {summary.map((s) => (
           <div key={s.label} className="rounded-2xl border-2 border-ink/10 bg-surface p-6">
             <p className="text-sm font-semibold text-ink-muted">{s.label}</p>
@@ -54,10 +66,6 @@ export default async function AnalyticsPage() {
         <BreakdownCard title="Sistema operacional" icon={Cpu} rows={os} />
         <BreakdownCard title="Navegadores" icon={AppWindow} rows={browsers} />
       </div>
-
-      <p className="mt-8 text-xs text-ink-muted">
-        Essa página (/analytics) não aparece em nenhum menu do site — só quem tem o link chega aqui.
-      </p>
-    </main>
+    </div>
   );
 }

@@ -1,9 +1,16 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.36.0**.
+Datas no fuso de Brasília. Versão atual: **1.37.0**.
 
 ---
+
+## 1.37.0 — Permissões mais finas + analytics no painel · 10/09/2026
+
+- **Ver usuários** virou permissão separada de **verificar contas**. Agora toda a equipe pode abrir *Painel → Usuários* e ver a lista; verificar identidade e corrigir telefone continua sendo uma permissão à parte; **dar cargo/permissão é só o CTO**.
+- **Analytics saiu de `/analytics` (link solto, sem login) e entrou no painel** em *Painel → Analytics*, com permissão própria (liberada pra admin; equipe o CTO libera individual).
+- **Menu do site** editável em *Painel → Página inicial*: liga/desliga cada link do menu da home (Sobre, Evento, Leilões, Comunidade, Na mídia, Novidades, Cartas, Fichário). Desligar só tira do menu, não apaga a página.
+- Ajuste interno: as permissões de cargo agora são resolvidas pelo cargo certo (antes um cargo podia herdar permissão de outro em casos raros); trocar cargo passou a exigir CTO no servidor, não só na tela.
 
 ## 1.36.0 — Perfil de colecionador + social no fichário · 09/09/2026
 

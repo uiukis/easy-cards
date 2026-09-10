@@ -8,7 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { setCardOfWeek, type CardOfWeek } from "./actions";
+import { Switch } from "@/components/ui/switch";
+import { SITE_NAV } from "@/lib/site-nav";
+import { setCardOfWeek, setNavHidden, type CardOfWeek } from "./actions";
 
 type Hit = {
   id: string;
@@ -21,7 +23,13 @@ type Hit = {
   rarity: string | null;
 };
 
-export function HomeClient({ initial }: { initial: CardOfWeek }) {
+export function HomeClient({
+  initial,
+  navHidden,
+}: {
+  initial: CardOfWeek;
+  navHidden: string[];
+}) {
   const [current, setCurrent] = useState(initial);
   const [note, setNote] = useState(initial?.note ?? "");
   const [q, setQ] = useState("");
@@ -29,6 +37,13 @@ export function HomeClient({ initial }: { initial: CardOfWeek }) {
   const [loading, setLoading] = useState(false);
   const [busy, start] = useTransition();
   const first = useRef(true);
+
+  const [hidden, setHidden] = useState<string[]>(navHidden);
+  function toggleNav(href: string, show: boolean) {
+    const next = show ? hidden.filter((h) => h !== href) : [...new Set([...hidden, href])];
+    setHidden(next);
+    start(() => setNavHidden(next));
+  }
 
   useEffect(() => {
     if (q.trim().length < 2) {
@@ -169,6 +184,36 @@ export function HomeClient({ initial }: { initial: CardOfWeek }) {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="mt-10 max-w-xl space-y-4">
+        <div>
+          <h2 className="font-display text-lg tracking-wide text-ink">MENU DO SITE</h2>
+          <p className="mt-1 text-sm text-ink-muted">
+            O que aparece no menu da página inicial (topo no computador, gaveta no celular).
+            Desligar aqui não apaga a página — só tira o link do menu.
+          </p>
+        </div>
+
+        <ul className="divide-y divide-ink/10 rounded-2xl border-2 border-ink/10 bg-surface">
+          {SITE_NAV.map((link) => {
+            const shown = !hidden.includes(link.href);
+            return (
+              <li key={link.href} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink">{link.label}</p>
+                  <p className="truncate font-mono text-[11px] text-ink-muted">{link.href}</p>
+                </div>
+                <Switch
+                  checked={shown}
+                  disabled={busy}
+                  onCheckedChange={(v) => toggleNav(link.href, v)}
+                  aria-label={`Mostrar ${link.label} no menu`}
+                />
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </div>
   );
