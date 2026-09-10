@@ -1,6 +1,6 @@
 // Minimal service worker: makes the site installable and gives a friendly
 // offline page. Network-first for navigations, cache-first for static assets.
-const VERSION = "ec-v3";
+const VERSION = "ec-v4";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
