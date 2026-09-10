@@ -289,7 +289,6 @@ export async function importAuctionRows(
         set_name: r.card.set_name || null,
         card_number: r.card.card_number || null,
         image_url: r.card.image_url || null,
-        rarity: r.card.rarity || null,
         condition: "NM",
         status: "sold" as const,
         in_stock: false,

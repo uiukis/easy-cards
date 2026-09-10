@@ -542,6 +542,24 @@ export function CartasClient({
                           </span>
                         );
                       })()}
+                      {canViewFinance &&
+                        card.status === "sold" &&
+                        fin?.due_date &&
+                        fin.payment_status !== "pago" && (
+                          <span
+                            className={`rounded px-1.5 py-0.5 font-semibold ${
+                              isOverdue({ due_date: fin.due_date, payment_status: fin.payment_status })
+                                ? "bg-destructive/15 text-destructive"
+                                : "bg-surface-alt text-ink-muted"
+                            }`}
+                          >
+                            prazo{" "}
+                            {new Date(`${fin.due_date}T00:00:00`).toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                            })}
+                          </span>
+                        )}
                       {canViewFinance && fin?.auction_label && (
                         <span className="rounded bg-surface-alt px-1.5 py-0.5 font-semibold text-ink-muted">
                           {fin.auction_label}
