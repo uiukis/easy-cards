@@ -674,7 +674,7 @@ export function CartasClient({
         <ImportLeilaoDialog
           open={importOpen}
           onOpenChange={setImportOpen}
-          onDone={() => router.refresh()}
+          onDone={() => window.location.reload()}
         />
       )}
 
