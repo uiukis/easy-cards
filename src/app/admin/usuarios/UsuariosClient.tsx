@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, AlertTriangle, Pencil, Check, X, BadgeCheck, ShieldQuestion } from "lucide-react";
+import { Loader2, Pencil, Check, X, BadgeCheck, ShieldQuestion } from "lucide-react";
 import type { Profile, UserRole } from "@/lib/supabase/types";
 import type { PermissionKey } from "@/lib/permissions";
 import { maskPhoneBR } from "@/lib/phone";
@@ -112,19 +112,6 @@ export function UsuariosClient({
               : "Você pode ver a lista. Verificar contas e mexer em cargos é com o CTO."
         }
       />
-
-      {canManage && (
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-primary/30 bg-primary/10 p-3 text-xs text-ink">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-          <p>
-            O cadastro não confirma o número por SMS (é assim que fica de graça), então qualquer um
-            pode se cadastrar com qualquer número. Quando você tiver certeza de que a conta é da
-            pessoa mesmo (falou no grupo, comprou pessoalmente…), marca ela como{" "}
-            <span className="font-semibold">verificada</span> — o site passa a mostrar o nome
-            completo dela e um selo. Sem verificação, o perfil público mostra só o primeiro nome.
-          </p>
-        </div>
-      )}
 
       <ul className="mt-6 space-y-2.5">
         {rows.map((p) => (
@@ -243,27 +230,29 @@ export function UsuariosClient({
               )}
             </div>
 
-            <div className="basis-full pl-11 text-[11px] text-ink-muted">
-              {p.role === "cto" ? (
-                <span className="font-semibold text-teal">Vê tudo (CTO)</span>
-              ) : p.role === "customer" ? (
-                <span>Vê só as ferramentas de cliente (fichário, desejos…)</span>
-              ) : (permsById[p.id] ?? []).length === 0 ? (
-                <span>Equipe, mas sem nenhuma permissão de painel ligada</span>
-              ) : (
-                <span className="flex flex-wrap items-center gap-1">
-                  <span className="mr-0.5">Vê:</span>
-                  {(permsById[p.id] ?? []).map((k) => (
-                    <span
-                      key={k}
-                      className="rounded-full border border-ink/15 bg-surface-alt px-1.5 py-0.5 font-medium text-ink"
-                    >
-                      {PERM_SHORT[k]}
-                    </span>
-                  ))}
-                </span>
-              )}
-            </div>
+            {canEditRoles && (
+              <div className="basis-full pl-11 text-[11px] text-ink-muted">
+                {p.role === "cto" ? (
+                  <span className="font-semibold text-teal">Vê tudo (CTO)</span>
+                ) : p.role === "customer" ? (
+                  <span>Vê só as ferramentas de cliente (fichário, desejos…)</span>
+                ) : (permsById[p.id] ?? []).length === 0 ? (
+                  <span>Equipe, mas sem nenhuma permissão de painel ligada</span>
+                ) : (
+                  <span className="flex flex-wrap items-center gap-1">
+                    <span className="mr-0.5">Vê:</span>
+                    {(permsById[p.id] ?? []).map((k) => (
+                      <span
+                        key={k}
+                        className="rounded-full border border-ink/15 bg-surface-alt px-1.5 py-0.5 font-medium text-ink"
+                      >
+                        {PERM_SHORT[k]}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
+            )}
           </li>
         ))}
       </ul>
