@@ -4,6 +4,9 @@ import { getEffectivePermissions } from "@/lib/get-permissions";
 import type { CardFinance } from "@/lib/supabase/types";
 import { CartasClient, type WishMatch } from "./CartasClient";
 
+// the "importar leilão" action fans out to the (flaky) TCG API
+export const maxDuration = 60;
+
 export default async function CartasPage({
   searchParams,
 }: {

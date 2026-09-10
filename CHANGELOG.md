@@ -1,9 +1,18 @@
 # Changelog — Easy Cards
 
 Tudo que mudou no site/app, do mais novo pro mais antigo.
-Datas no fuso de Brasília. Versão atual: **1.37.0**.
+Datas no fuso de Brasília. Versão atual: **1.38.0**.
 
 ---
+
+## 1.38.0 — Controle de pagamento + importar leilão · 10/09/2026
+
+- **Status de pagamento** em cada venda: Aberto / Parcial / Pago. No parcial dá pra registrar quanto já pagou, e o "A receber" passa a somar só o que falta.
+- **Prazo de pagamento** por venda + destaque de **vencidos** (no painel do financeiro e na lista de cartas).
+- **Etiqueta de leilão/lote** por venda, pra filtrar um leilão inteiro de uma vez.
+- **Financeiro → "Todas as vendas"**: tabela nova com busca e filtros por status, comprador e leilão.
+- **Cartas**: filtros de pagamento (parcial, vencido), comprador e leilão; o CSV ganhou essas colunas.
+- **Importar leilão** (botão em *Cartas*): a menina do financeiro cola a lista da planilha (comprador, carta, valor, pagamento) e o sistema cria cada carta + o registro no financeiro, tentando achar a arte de cada uma na base do TCG. Tela de revisão antes de confirmar.
 
 ## 1.37.0 — Permissões mais finas + analytics no painel · 10/09/2026
 

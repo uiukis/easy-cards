@@ -19,6 +19,7 @@ import {
   Heart,
   ExternalLink,
   Layers,
+  Upload,
 } from "lucide-react";
 import type { Card, CardFinance } from "@/lib/supabase/types";
 import { toCsv, downloadCsv } from "@/lib/csv";
@@ -35,6 +36,7 @@ import {
 import { CardSearch, type SearchResult } from "./CardSearch";
 import { AddCardsDialog } from "@/app/fichario/AddCardsDialog";
 import { FinanceModal } from "./FinanceModal";
+import { ImportLeilaoDialog } from "./ImportLeilaoDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,6 +133,7 @@ export function CartasClient({
   const [wishFor, setWishFor] = useState<{ card: Card; matches: WishMatch[] } | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   async function handleBulk(picked: SearchResult[]) {
     if (picked.length === 0) return;
@@ -296,6 +299,12 @@ export function CartasClient({
         subtitle="Catálogo pro leilão e vendas."
         action={
           <div className="flex flex-wrap gap-2">
+            {canViewFinance && (
+              <Button variant="outline" onClick={() => setImportOpen(true)}>
+                <Upload className="h-4 w-4" />
+                Importar leilão
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setBulkOpen(true)}>
               <Layers className="h-4 w-4" />
               Em lote
@@ -642,6 +651,14 @@ export function CartasClient({
         currentPage={1}
         adding={bulkBusy}
       />
+
+      {canViewFinance && (
+        <ImportLeilaoDialog
+          open={importOpen}
+          onOpenChange={setImportOpen}
+          onDone={() => router.refresh()}
+        />
+      )}
 
       <Dialog open={wishFor !== null} onOpenChange={(v) => !v && setWishFor(null)}>
         <DialogContent className="max-w-sm">
