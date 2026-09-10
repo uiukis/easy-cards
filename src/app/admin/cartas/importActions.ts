@@ -70,14 +70,16 @@ export async function importAuctionRows(
     await supabase.from("card_finance").insert(
       rows.map((r, i) => {
         const price = r.free ? 0 : r.price;
+        // a freebie has nothing to receive — treat it as settled
+        const status = r.free ? "pago" : r.paymentStatus;
         return {
           card_id: cards[i].id,
           final_price: price,
           buyer_name: r.buyer || null,
           sold_at: soldAt,
-          payment_status: r.paymentStatus,
-          amount_paid: r.paymentStatus === "pago" ? price ?? 0 : 0,
-          paid_at: r.paymentStatus === "pago" ? opts.soldDate || null : null,
+          payment_status: status,
+          amount_paid: status === "pago" ? price ?? 0 : 0,
+          paid_at: status === "pago" ? opts.soldDate || null : null,
           due_date: opts.dueDate || null,
           auction_label: label,
           notes: r.notes || (r.free ? "gratuito" : null),
