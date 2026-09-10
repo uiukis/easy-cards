@@ -84,6 +84,10 @@ export type CardFinance = {
   buyer_name: string | null;
   sold_at: string | null;
   paid_at: string | null;
+  payment_status: "aberto" | "parcial" | "pago";
+  amount_paid: number;
+  due_date: string | null;
+  auction_label: string | null;
   buyer_confirmed_at: string | null;
   buyer_disputed_at: string | null;
   consignor_name: string | null;

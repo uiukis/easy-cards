@@ -5,6 +5,7 @@ import { Loader2, HandCoins } from "lucide-react";
 import type { Card, CardFinance } from "@/lib/supabase/types";
 import { upsertCardFinance } from "./financeActions";
 import { maskBRL, brlFromNumber, brlToPlain } from "@/lib/money";
+import { PAY_LABEL } from "@/lib/finance";
 import { BuyerPicker } from "./BuyerPicker";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { Button } from "@/components/ui/button";
@@ -54,8 +55,15 @@ export function FinanceModal({
   const [notes, setNotes] = useState(finance?.notes ?? "");
   const [markSold, setMarkSold] = useState(!!finance?.sold_at);
   const [soldDate, setSoldDate] = useState(finance?.sold_at?.slice(0, 10) ?? todayISO());
-  const [paid, setPaid] = useState(!!finance?.paid_at);
+  const [payStatus, setPayStatus] = useState<"aberto" | "parcial" | "pago">(
+    finance?.payment_status ?? "aberto"
+  );
+  const [amountPaid, setAmountPaid] = useState(
+    finance?.amount_paid ? brlFromNumber(finance.amount_paid) : ""
+  );
   const [paidDate, setPaidDate] = useState(finance?.paid_at?.slice(0, 10) ?? todayISO());
+  const [dueDate, setDueDate] = useState(finance?.due_date?.slice(0, 10) ?? "");
+  const [auctionLabel, setAuctionLabel] = useState(finance?.auction_label ?? "");
   const [consignorName, setConsignorName] = useState(finance?.consignor_name ?? "");
   const [commissionPct, setCommissionPct] = useState(
     finance?.commission_pct != null ? String(finance.commission_pct) : ""
@@ -81,8 +89,11 @@ export function FinanceModal({
         dominaria_fee: brlToPlain(dominariaFee),
         dominaria_deposited: dominariaDeposited,
         dominaria_deposit_date: dominariaDepositDate,
-        paid,
+        payment_status: payStatus,
+        amount_paid: brlToPlain(amountPaid),
         paid_date: paidDate,
+        due_date: dueDate,
+        auction_label: auctionLabel,
         notes,
         mark_sold: markSold,
         sold_date: soldDate,
@@ -193,17 +204,55 @@ export function FinanceModal({
             </div>
           )}
 
-          <label className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Switch checked={paid} onCheckedChange={setPaid} />
-            Pagamento recebido
-          </label>
-
-          {paid && (
-            <div className="space-y-1.5">
-              <Label>Data do pagamento</Label>
-              <Input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
+          <div className="rounded-xl border-2 border-ink/10 p-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Pagamento</Label>
+                <Select value={payStatus} onValueChange={(v) => v && setPayStatus(v as typeof payStatus)}>
+                  <SelectTrigger size="sm">
+                    <SelectValue>{(v: string) => PAY_LABEL[v] ?? v}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="aberto">Aberto</SelectItem>
+                    <SelectItem value="parcial">Parcial</SelectItem>
+                    <SelectItem value="pago">Pago</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {payStatus === "parcial" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Já pagou</Label>
+                  <Input
+                    inputMode="decimal"
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(maskBRL(e.target.value))}
+                    placeholder="R$ 0,00"
+                  />
+                </div>
+              )}
+              {payStatus === "pago" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Data do pagamento</Label>
+                  <Input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
+                </div>
+              )}
             </div>
-          )}
+            {payStatus !== "pago" && (
+              <div className="mt-2 space-y-1.5">
+                <Label className="text-xs">Prazo pra pagar (opcional)</Label>
+                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">Leilão / lote (opcional)</Label>
+            <Input
+              value={auctionLabel}
+              onChange={(e) => setAuctionLabel(e.target.value)}
+              placeholder="ex.: Leilão 08/09"
+            />
+          </div>
 
           <div className="rounded-xl border-2 border-ink/10 p-3">
             <p className="text-sm font-semibold text-ink">Consignação (carta de terceiro)</p>

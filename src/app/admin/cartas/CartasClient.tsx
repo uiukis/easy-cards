@@ -23,6 +23,7 @@ import {
 import type { Card, CardFinance } from "@/lib/supabase/types";
 import { toCsv, downloadCsv } from "@/lib/csv";
 import { maskBRL, brlFromNumber, brlToPlain } from "@/lib/money";
+import { PAY_LABEL, isOverdue, owed as owedOf } from "@/lib/finance";
 import {
   createCard,
   updateCard,
@@ -164,6 +165,31 @@ export function CartasClient({
   const [q, setQ] = useState("");
   const [statusF, setStatusF] = useState("all");
   const [payF, setPayF] = useState("all");
+  const [buyerF, setBuyerF] = useState("all");
+  const [auctionF, setAuctionF] = useState("all");
+
+  const buyerOptions = useMemo(
+    () =>
+      [
+        ...new Set(
+          Object.values(financeByCardId)
+            .map((f) => f.buyer_name)
+            .filter(Boolean) as string[]
+        ),
+      ].sort(),
+    [financeByCardId]
+  );
+  const auctionOptions = useMemo(
+    () =>
+      [
+        ...new Set(
+          Object.values(financeByCardId)
+            .map((f) => f.auction_label)
+            .filter(Boolean) as string[]
+        ),
+      ].sort(),
+    [financeByCardId]
+  );
 
   async function handleDelete(id: string) {
     setDeletingId(id);
@@ -179,18 +205,29 @@ export function CartasClient({
       if (term && !`${c.name} ${c.set_name ?? ""} ${c.card_number ?? ""}`.toLowerCase().includes(term))
         return false;
       if (statusF !== "all" && c.status !== statusF) return false;
+      const fin = financeByCardId[c.id];
       if (payF !== "all") {
-        const fin = financeByCardId[c.id];
-        if (payF === "paid" && !fin?.paid_at) return false;
-        if (payF === "unpaid" && (fin?.paid_at || c.status !== "sold")) return false;
+        const st = fin?.payment_status ?? "aberto";
+        if (payF === "paid" && st !== "pago") return false;
+        if (payF === "parcial" && st !== "parcial") return false;
+        if (payF === "unpaid" && (st === "pago" || c.status !== "sold")) return false;
+        if (payF === "vencido" && !isOverdue({ due_date: fin?.due_date ?? null, payment_status: st }))
+          return false;
         if (payF === "domi_pending" && !(fin?.delivery_method === "dominaria" && !fin.dominaria_deposited_at))
           return false;
       }
+      if (buyerF !== "all" && fin?.buyer_name !== buyerF) return false;
+      if (auctionF !== "all" && fin?.auction_label !== auctionF) return false;
       return true;
     });
-  }, [cards, q, statusF, payF, financeByCardId]);
+  }, [cards, q, statusF, payF, buyerF, auctionF, financeByCardId]);
 
-  const activeFilters = (statusF !== "all" ? 1 : 0) + (payF !== "all" ? 1 : 0) + (q.trim() ? 1 : 0);
+  const activeFilters =
+    (statusF !== "all" ? 1 : 0) +
+    (payF !== "all" ? 1 : 0) +
+    (buyerF !== "all" ? 1 : 0) +
+    (auctionF !== "all" ? 1 : 0) +
+    (q.trim() ? 1 : 0);
 
   function handleExport() {
     const header = [
@@ -204,9 +241,13 @@ export function CartasClient({
       "Entrega",
       "Taxa Dominaria",
       "Depositado na Domi",
-      "Pago",
+      "Pagamento",
+      "Já pagou",
+      "Falta",
+      "Prazo",
       "Pago em",
       "Vendido em",
+      "Leilão",
       "Observações",
     ];
     const rows = filtered.map((c) => {
@@ -226,9 +267,21 @@ export function CartasClient({
         f?.delivery_method === "dominaria" ? "Dominaria" : f?.delivery_method === "maos" ? "Em mãos" : "",
         money(f?.dominaria_fee),
         date(f?.dominaria_deposited_at),
-        f?.paid_at ? "Sim" : c.status === "sold" ? "Não" : "",
+        f ? PAY_LABEL[f.payment_status] ?? f.payment_status : c.status === "sold" ? "Aberto" : "",
+        money(f?.amount_paid),
+        f
+          ? money(
+              owedOf({
+                final_price: f.final_price,
+                amount_paid: f.amount_paid,
+                payment_status: f.payment_status,
+              })
+            )
+          : "",
+        date(f?.due_date),
         date(f?.paid_at),
         date(f?.sold_at),
+        f?.auction_label ?? "",
         (f?.notes ?? "").replace(/\r?\n/g, " "),
       ];
     });
@@ -313,17 +366,54 @@ export function CartasClient({
               <SelectTrigger className="h-9">
                 <SelectValue>
                   {(v: string) =>
-                    ({ all: "Pagamento", paid: "Pago", unpaid: "A receber", domi_pending: "Domi a depositar" }[
-                      v
-                    ] ?? "Pagamento")
+                    ({
+                      all: "Pagamento",
+                      paid: "Pago",
+                      parcial: "Parcial",
+                      unpaid: "A receber",
+                      vencido: "Vencido",
+                      domi_pending: "Domi a depositar",
+                    }[v] ?? "Pagamento")
                   }
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Qualquer pagamento</SelectItem>
-                <SelectItem value="paid">Pago</SelectItem>
                 <SelectItem value="unpaid">A receber</SelectItem>
+                <SelectItem value="parcial">Parcial</SelectItem>
+                <SelectItem value="vencido">Vencido</SelectItem>
+                <SelectItem value="paid">Pago</SelectItem>
                 <SelectItem value="domi_pending">Domi a depositar</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          {canViewFinance && buyerOptions.length > 0 && (
+            <Select value={buyerF} onValueChange={(v) => v && setBuyerF(v)}>
+              <SelectTrigger className="h-9">
+                <SelectValue>{(v: string) => (v === "all" ? "Comprador" : v)}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Qualquer comprador</SelectItem>
+                {buyerOptions.map((b) => (
+                  <SelectItem key={b} value={b}>
+                    {b}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {canViewFinance && auctionOptions.length > 0 && (
+            <Select value={auctionF} onValueChange={(v) => v && setAuctionF(v)}>
+              <SelectTrigger className="h-9">
+                <SelectValue>{(v: string) => (v === "all" ? "Leilão" : v)}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Qualquer leilão</SelectItem>
+                {auctionOptions.map((a) => (
+                  <SelectItem key={a} value={a}>
+                    {a}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
@@ -333,6 +423,8 @@ export function CartasClient({
                 setQ("");
                 setStatusF("all");
                 setPayF("all");
+                setBuyerF("all");
+                setAuctionF("all");
               }}
               className="flex items-center gap-1 text-xs font-semibold text-ink-muted hover:text-ink"
             >
@@ -416,13 +508,34 @@ export function CartasClient({
                             : "Domi — a depositar"}
                         </span>
                       )}
-                      {canViewFinance && card.status === "sold" && (
-                        <span
-                          className={`rounded px-1.5 py-0.5 font-semibold ${
-                            fin?.paid_at ? "bg-teal/15 text-teal" : "bg-destructive/15 text-destructive"
-                          }`}
-                        >
-                          {fin?.paid_at ? "Pago" : "A receber"}
+                      {canViewFinance && card.status === "sold" && (() => {
+                        const st = fin?.payment_status ?? "aberto";
+                        const over = isOverdue({ due_date: fin?.due_date ?? null, payment_status: st });
+                        return (
+                          <span
+                            className={`rounded px-1.5 py-0.5 font-semibold ${
+                              st === "pago"
+                                ? "bg-teal/15 text-teal"
+                                : over
+                                  ? "bg-destructive/15 text-destructive"
+                                  : st === "parcial"
+                                    ? "bg-orange/15 text-orange-deep"
+                                    : "bg-destructive/15 text-destructive"
+                            }`}
+                          >
+                            {st === "pago"
+                              ? "Pago"
+                              : over
+                                ? "Vencido"
+                                : st === "parcial"
+                                  ? "Parcial"
+                                  : "A receber"}
+                          </span>
+                        );
+                      })()}
+                      {canViewFinance && fin?.auction_label && (
+                        <span className="rounded bg-surface-alt px-1.5 py-0.5 font-semibold text-ink-muted">
+                          {fin.auction_label}
                         </span>
                       )}
                       {card.in_stock && (

@@ -28,12 +28,23 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Dashboard quick-action: mark a sale as paid (money landed). */
+/** Dashboard quick-action: mark a sale as fully paid (money landed). */
 export async function markCardPaid(cardId: string, date?: string) {
   const { supabase, user } = await requireFinance();
+  const { data: row } = await supabase
+    .from("card_finance")
+    .select("final_price")
+    .eq("card_id", cardId)
+    .maybeSingle();
   const { error } = await supabase
     .from("card_finance")
-    .update({ paid_at: date || today(), updated_by: user.id, updated_at: new Date().toISOString() })
+    .update({
+      payment_status: "pago",
+      amount_paid: row?.final_price ?? 0,
+      paid_at: date || today(),
+      updated_by: user.id,
+      updated_at: new Date().toISOString(),
+    })
     .eq("card_id", cardId);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/financeiro");

@@ -7,6 +7,8 @@ import { AdminPageHeader } from "@/components/AdminPageHeader";
 import { MonthClose } from "./MonthClose";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkButton } from "./QuickActions";
+import { SalesTable, type SaleRow } from "./SalesTable";
+import { owed as owedOf, isOverdue } from "@/lib/finance";
 
 const brl = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -26,6 +28,10 @@ type FinRow = {
   buyer_name: string | null;
   sold_at: string | null;
   paid_at: string | null;
+  payment_status: "aberto" | "parcial" | "pago";
+  amount_paid: number | null;
+  due_date: string | null;
+  auction_label: string | null;
   buyer_disputed_at: string | null;
   consignor_name: string | null;
   commission_pct: number | null;
@@ -66,9 +72,15 @@ export default async function FinanceiroPage() {
   const { data } = await supabase
     .from("card_finance")
     .select(
-      "card_id, final_price, delivery_method, dominaria_fee, dominaria_deposited_at, buyer_id, buyer_name, sold_at, paid_at, buyer_disputed_at, consignor_name, commission_pct, consignor_paid_at, cards(name, status)"
+      "card_id, final_price, delivery_method, dominaria_fee, dominaria_deposited_at, buyer_id, buyer_name, sold_at, paid_at, payment_status, amount_paid, due_date, auction_label, buyer_disputed_at, consignor_name, commission_pct, consignor_paid_at, cards(name, status)"
     );
   const rows = (data ?? []) as FinRow[];
+  const owed = (r: FinRow) =>
+    owedOf({
+      final_price: r.final_price,
+      amount_paid: r.amount_paid,
+      payment_status: r.payment_status,
+    });
 
   const startOfMonth = new Date();
   startOfMonth.setDate(1);
@@ -82,13 +94,14 @@ export default async function FinanceiroPage() {
     .filter((r) => soldWhen(r) && new Date(soldWhen(r)!) >= startOfMonth)
     .reduce((s, r) => s + num(r.final_price), 0);
 
-  const receivable = sold.filter((r) => !r.paid_at);
-  const receivableTotal = receivable.reduce((s, r) => s + num(r.final_price), 0);
+  const receivable = sold.filter((r) => r.payment_status !== "pago");
+  const receivableTotal = receivable.reduce((s, r) => s + owed(r), 0);
+  const overdue = receivable.filter((r) => isOverdue(r));
 
   const disputed = rows.filter((r) => r.buyer_disputed_at);
 
   const consignOwed = sold.filter(
-    (r) => r.consignor_name && r.paid_at && !r.consignor_paid_at
+    (r) => r.consignor_name && r.payment_status === "pago" && !r.consignor_paid_at
   );
   const consignShare = (r: FinRow) =>
     num(r.final_price) * (1 - num(r.commission_pct) / 100);
@@ -113,7 +126,7 @@ export default async function FinanceiroPage() {
     const cur = byBuyer.get(key) ?? { name, count: 0, total: 0, owed: 0 };
     cur.count += 1;
     cur.total += num(r.final_price);
-    if (!r.paid_at) cur.owed += num(r.final_price);
+    cur.owed += owed(r);
     byBuyer.set(key, cur);
   }
   const buyers = [...byBuyer.values()].sort((a, b) => b.owed - a.owed || b.total - a.total);
@@ -121,6 +134,19 @@ export default async function FinanceiroPage() {
   const recentSales = [...sold]
     .sort((a, b) => new Date(soldWhen(b) ?? 0).getTime() - new Date(soldWhen(a) ?? 0).getTime())
     .slice(0, 8);
+
+  const saleRows: SaleRow[] = sold.map((r) => ({
+    cardId: r.card_id,
+    name: cardName(r),
+    buyer: r.buyer_name,
+    price: num(r.final_price),
+    owed: owed(r),
+    status: r.payment_status,
+    overdue: isOverdue(r),
+    dueDate: r.due_date,
+    soldAt: soldWhen(r),
+    auction: r.auction_label,
+  }));
 
   const kpis = [
     { label: "Vendido esse mês", value: brl(totalMonth), icon: TrendingUp, color: "text-teal" },
@@ -130,7 +156,10 @@ export default async function FinanceiroPage() {
       value: brl(receivableTotal),
       icon: Clock,
       color: "text-destructive",
-      hint: `${receivable.length} carta(s)`,
+      hint:
+        overdue.length > 0
+          ? `${receivable.length} carta(s) · ${overdue.length} vencida(s)`
+          : `${receivable.length} carta(s)`,
     },
     { label: "Taxas Dominaria", value: brl(domiFees), icon: Truck, color: "text-orange-deep" },
   ];
@@ -209,17 +238,44 @@ export default async function FinanceiroPage() {
             ) : (
               <ul className="mt-4 space-y-2.5">
                 {receivable
-                  .sort((a, b) => new Date(soldWhen(a) ?? 0).getTime() - new Date(soldWhen(b) ?? 0).getTime())
+                  .sort((a, b) => {
+                    const ao = isOverdue(a) ? 1 : 0;
+                    const bo = isOverdue(b) ? 1 : 0;
+                    if (ao !== bo) return bo - ao;
+                    return new Date(soldWhen(a) ?? 0).getTime() - new Date(soldWhen(b) ?? 0).getTime();
+                  })
                   .map((r) => (
                     <li key={r.card_id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-sm">
                       <Link href={`/admin/cartas?finance=${r.card_id}`} className="group min-w-0 flex-1">
-                        <p className="truncate font-semibold text-ink group-hover:underline">{cardName(r)}</p>
+                        <p className="truncate font-semibold text-ink group-hover:underline">
+                          {cardName(r)}
+                          {r.payment_status === "parcial" && (
+                            <span className="ml-1.5 rounded-full bg-orange-deep/10 px-1.5 py-0.5 text-[10px] font-bold text-orange-deep">
+                              parcial
+                            </span>
+                          )}
+                          {isOverdue(r) && (
+                            <span className="ml-1.5 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive">
+                              vencido
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-ink-muted">
-                          {r.buyer_name || "sem comprador"} {soldWhen(r) ? ` · vendida há ${daysSince(soldWhen(r)!)}` : ""}
+                          {r.buyer_name || "sem comprador"}
+                          {r.due_date
+                            ? ` · prazo ${new Date(`${r.due_date}T00:00:00`).toLocaleDateString("pt-BR")}`
+                            : soldWhen(r)
+                              ? ` · vendida há ${daysSince(soldWhen(r)!)}`
+                              : ""}
                         </p>
                       </Link>
                       <span className="shrink-0 font-semibold text-destructive">
-                        {brl(num(r.final_price))}
+                        {brl(owed(r))}
+                        {r.payment_status === "parcial" && (
+                          <span className="ml-1 text-[10px] font-normal text-ink-muted">
+                            de {brl(num(r.final_price))}
+                          </span>
+                        )}
                       </span>
                       <MarkButton kind="paid" cardId={r.card_id} />
                     </li>
@@ -338,7 +394,11 @@ export default async function FinanceiroPage() {
                       <p className="truncate text-ink group-hover:underline">{cardName(r)}</p>
                       <p className="text-xs text-ink-muted">
                         {soldWhen(r) ? new Date(soldWhen(r)!).toLocaleDateString("pt-BR") : "vendida"}
-                        {r.paid_at ? " · pago" : " · a receber"}
+                        {r.payment_status === "pago"
+                          ? " · pago"
+                          : r.payment_status === "parcial"
+                            ? " · parcial"
+                            : " · a receber"}
                       </p>
                     </Link>
                     <span className="shrink-0 font-semibold text-primary">
@@ -350,6 +410,10 @@ export default async function FinanceiroPage() {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="mt-8">
+        <SalesTable rows={saleRows} />
       </div>
     </div>
   );

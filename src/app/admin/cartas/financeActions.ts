@@ -11,8 +11,11 @@ export type CardFinanceInput = {
   dominaria_fee: string;
   dominaria_deposited: boolean;
   dominaria_deposit_date: string;
-  paid: boolean;
+  payment_status: "aberto" | "parcial" | "pago";
+  amount_paid: string;
   paid_date: string;
+  due_date: string;
+  auction_label: string;
   notes: string;
   mark_sold: boolean;
   sold_date: string;
@@ -30,10 +33,19 @@ export async function upsertCardFinance(cardId: string, input: CardFinanceInput)
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autenticado.");
 
+  const price = input.final_price ? Number(input.final_price) : null;
+  const status = input.payment_status;
+  const amountPaid =
+    status === "pago"
+      ? (price ?? 0)
+      : status === "parcial"
+        ? Number(input.amount_paid || 0)
+        : 0;
+
   const { error } = await supabase.from("card_finance").upsert(
     {
       card_id: cardId,
-      final_price: input.final_price ? Number(input.final_price) : null,
+      final_price: price,
       delivery_method: input.delivery_method || null,
       dominaria_fee:
         input.delivery_method === "dominaria" && input.dominaria_fee
@@ -46,7 +58,14 @@ export async function upsertCardFinance(cardId: string, input: CardFinanceInput)
       buyer_id: input.buyer_id,
       buyer_name: input.buyer_name || null,
       sold_at: input.mark_sold ? new Date(input.sold_date || Date.now()).toISOString() : null,
-      paid_at: input.paid ? input.paid_date || new Date().toISOString().slice(0, 10) : null,
+      payment_status: status,
+      amount_paid: amountPaid,
+      paid_at:
+        status === "pago"
+          ? input.paid_date || new Date().toISOString().slice(0, 10)
+          : null,
+      due_date: input.due_date || null,
+      auction_label: input.auction_label?.trim() || null,
       notes: input.notes || null,
       consignor_name: input.consignor_name?.trim() || null,
       commission_pct: input.commission_pct ? Number(input.commission_pct) : null,
