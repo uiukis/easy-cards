@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Loader2, AlertTriangle, Check, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PAY_LABEL } from "@/lib/finance";
-import { parseAndMatch, importAuctionRows, type MatchedRow } from "./importActions";
+import {
+  parseLeilaoRows,
+  tcgSearchByName,
+  pickMatch,
+  type MatchedRow,
+  type TcgCard,
+} from "@/lib/leilao";
+import { importAuctionRows } from "./importActions";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T, i: number) => Promise<R>) {
+  let cursor = 0;
+  async function worker() {
+    while (cursor < items.length) {
+      const i = cursor++;
+      await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
 
 export function ImportLeilaoDialog({
   open,
@@ -25,41 +43,67 @@ export function ImportLeilaoDialog({
   const [text, setText] = useState("");
   const [rows, setRows] = useState<MatchedRow[] | null>(null);
   const [skip, setSkip] = useState<Set<number>>(new Set());
-  const [analyzing, setAnalyzing] = useState(false);
+  const [phase, setPhase] = useState<"input" | "matching" | "review">("input");
+  const [progress, setProgress] = useState(0);
   const [importing, setImporting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const poolCache = useRef<Map<string, TcgCard[]>>(new Map());
 
   const today = new Date().toISOString().slice(0, 10);
   const [label, setLabel] = useState("");
   const [soldDate, setSoldDate] = useState(today);
   const [dueDate, setDueDate] = useState("");
 
-  async function analyze(merge = false) {
-    setAnalyzing(true);
+  async function analyze(onlyMissing = false) {
     setErr(null);
-    try {
-      const res = await parseAndMatch(text);
-      setRows((prev) => {
-        if (!merge || !prev) return res;
-        // keep what we already matched, fill in the ones that just resolved
-        return res.map((r, i) => (prev[i]?.match ? prev[i] : r));
-      });
-      if (!merge) setSkip(new Set());
-      if (!label) {
-        const d = new Date(soldDate);
-        setLabel(`Leilão ${d.getUTCDate()}/${d.getUTCMonth() + 1}`);
+    const parsed = parseLeilaoRows(text);
+    if (parsed.length === 0) {
+      setErr("Não achei nenhuma linha de carta nesse texto.");
+      return;
+    }
+
+    const base: MatchedRow[] =
+      onlyMissing && rows
+        ? rows
+        : parsed.map((p) => ({ ...p, match: null, ambiguous: false }));
+    setRows(base);
+    setPhase("matching");
+    setProgress(0);
+
+    const targets = base
+      .map((r, i) => ({ r, i }))
+      .filter(({ r }) => !r.match && r.name.length >= 3);
+    const names = [...new Set(targets.map((t) => t.r.name.toLowerCase()))];
+
+    let done = 0;
+    await mapLimit(names, 5, async (n) => {
+      let pool = poolCache.current.get(n);
+      if (!pool) {
+        pool = await tcgSearchByName(n);
+        if (pool.length) poolCache.current.set(n, pool);
       }
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Não deu pra analisar.");
-    } finally {
-      setAnalyzing(false);
+      setRows((prev) => {
+        if (!prev) return prev;
+        const next = [...prev];
+        for (const { i } of targets) {
+          if (next[i].name.toLowerCase() !== n || next[i].match) continue;
+          const { match, ambiguous } = pickMatch(next[i], pool!);
+          next[i] = { ...next[i], match, ambiguous };
+        }
+        return next;
+      });
+      done++;
+      setProgress(Math.round((done / names.length) * 100));
+    });
+
+    setPhase("review");
+    if (!label) {
+      const d = new Date(soldDate);
+      setLabel(`Leilão ${d.getUTCDate()}/${d.getUTCMonth() + 1}`);
     }
   }
 
-  const keep = useMemo(
-    () => (rows ?? []).filter((_, i) => !skip.has(i)),
-    [rows, skip]
-  );
+  const keep = useMemo(() => (rows ?? []).filter((_, i) => !skip.has(i)), [rows, skip]);
   const unmatched = keep.filter((r) => !r.match).length;
   const total = keep.reduce((s, r) => s + (r.free ? 0 : r.price ?? 0), 0);
 
@@ -74,24 +118,28 @@ export function ImportLeilaoDialog({
         free: r.free,
         paymentStatus: r.paymentStatus,
         notes: r.notes,
-        card: r.match ?? {
-          tcg_api_id: "",
-          name: r.name,
-          set_name: "",
-          card_number: r.number,
-          image_url: "",
-          rarity: null,
-        },
+        card: r.match
+          ? {
+              tcg_api_id: r.match.tcg_api_id,
+              name: r.match.name,
+              set_name: r.match.set_name,
+              card_number: r.match.card_number,
+              image_url: r.match.image_url,
+            }
+          : {
+              tcg_api_id: "",
+              name: r.name,
+              set_name: "",
+              card_number: r.number,
+              image_url: "",
+            },
       }));
-      const res = await importAuctionRows(payload, {
-        auctionLabel: label,
-        soldDate,
-        dueDate,
-      });
+      const res = await importAuctionRows(payload, { auctionLabel: label, soldDate, dueDate });
       onDone(res.added);
       onOpenChange(false);
       setText("");
       setRows(null);
+      setPhase("input");
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Não deu pra importar.");
     } finally {
@@ -118,12 +166,12 @@ export function ImportLeilaoDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {!rows ? (
+        {phase === "input" && (
           <div className="space-y-3">
             <p className="text-sm text-ink-muted">
               Cola a lista de cartas do leilão da planilha (colunas: comprador, carta, valor,
               pagamento, obs). Cada linha vira uma carta vendida no catálogo + registro no
-              financeiro. Eu tento achar a arte de cada carta na base do TCG.
+              financeiro. A arte de cada carta eu busco na base do TCG.
             </p>
             <Textarea
               rows={10}
@@ -135,14 +183,27 @@ export function ImportLeilaoDialog({
             {err && <p className="text-sm text-destructive">{err}</p>}
             <Button
               onClick={() => analyze(false)}
-              disabled={analyzing || text.trim().length < 3}
+              disabled={text.trim().length < 3}
               className="w-full"
             >
-              {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-              Analisar {text.trim() ? `(${text.trim().split(/\r?\n/).filter(Boolean).length} linhas)` : ""}
+              <Check className="h-4 w-4" />
+              Analisar{" "}
+              {text.trim() ? `(${text.trim().split(/\r?\n/).filter(Boolean).length} linhas)` : ""}
             </Button>
           </div>
-        ) : (
+        )}
+
+        {phase === "matching" && (
+          <div className="space-y-3 py-8 text-center">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
+            <p className="text-sm text-ink-muted">Procurando a arte de cada carta… {progress}%</p>
+            <div className="mx-auto h-1.5 w-48 overflow-hidden rounded-full bg-surface-alt">
+              <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        )}
+
+        {phase === "review" && rows && (
           <div className="space-y-3">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <div className="space-y-1">
@@ -164,14 +225,13 @@ export function ImportLeilaoDialog({
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                 <span className="flex-1">
                   {unmatched} carta(s) sem arte — entram assim mesmo, só sem imagem (a API do TCG
-                  falha às vezes; tenta de novo).
+                  falha às vezes).
                 </span>
                 <button
                   onClick={() => analyze(true)}
-                  disabled={analyzing}
-                  className="shrink-0 rounded-full border border-orange-deep/40 px-2 py-0.5 font-bold hover:bg-orange-deep/10 disabled:opacity-50"
+                  className="shrink-0 rounded-full border border-orange-deep/40 px-2 py-0.5 font-bold hover:bg-orange-deep/10"
                 >
-                  {analyzing ? "..." : "Tentar de novo"}
+                  Tentar de novo
                 </button>
               </div>
             )}
@@ -192,7 +252,11 @@ export function ImportLeilaoDialog({
                         <td className="w-9 p-1.5">
                           {r.match?.image_url ? (
                             // eslint-disable-next-line @next/next/no-img-element -- external card art
-                            <img src={r.match.image_url} alt="" className="h-11 w-8 rounded object-cover" />
+                            <img
+                              src={r.match.image_url}
+                              alt=""
+                              className="h-11 w-8 rounded object-cover"
+                            />
                           ) : (
                             <div className="flex h-11 w-8 items-center justify-center rounded bg-surface-alt text-ink-muted">
                               ?
@@ -202,7 +266,9 @@ export function ImportLeilaoDialog({
                         <td className="p-1.5">
                           <p className="font-semibold text-ink">
                             {r.match?.name ?? r.name}
-                            {r.number && <span className="ml-1 font-normal text-ink-muted">{r.number}</span>}
+                            {r.number && (
+                              <span className="ml-1 font-normal text-ink-muted">{r.number}</span>
+                            )}
                           </p>
                           <p className="text-ink-muted">
                             {r.match?.set_name || (r.match ? "" : "sem correspondência")}
@@ -236,11 +302,26 @@ export function ImportLeilaoDialog({
             {err && <p className="text-sm text-destructive">{err}</p>}
 
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setRows(null)} disabled={importing}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRows(null);
+                  setPhase("input");
+                }}
+                disabled={importing}
+              >
                 Voltar
               </Button>
-              <Button onClick={doImport} disabled={importing || keep.length === 0} className="flex-1">
-                {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              <Button
+                onClick={doImport}
+                disabled={importing || keep.length === 0}
+                className="flex-1"
+              >
+                {importing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
                 Importar {keep.length} carta(s) · {brl(total)}
               </Button>
             </div>
