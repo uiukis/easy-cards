@@ -562,6 +562,8 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   // one open before it) just snapped back where it started.
   async function moveCard(sourceId: string, targetIndex: number) {
     snapshot();
+    const moved = cards.find((c) => c.id === sourceId);
+    if (!moved) return;
     const withoutSource = cards.filter((c) => c.id !== sourceId);
     const gapsNeeded = Math.max(0, targetIndex - withoutSource.length);
     let blanks: BinderCard[] = [];
@@ -569,33 +571,25 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       try {
         const { ids } = await addBlankSlots(binder.id, gapsNeeded);
         blanks = ids.map(makeBlankCard);
-      } catch (e) {
-        console.error("[moveCard] addBlankSlots failed", e);
+      } catch {
         return;
       }
     }
-    console.log("[moveCard] proceeding", { sourceId, targetIndex, gapsNeeded, blankIds: blanks.map((b) => b.id) });
 
-    // Compute the new order inside the updater (must stay pure — no
-    // server-action calls there, that's what was crashing React's render),
-    // then fire the actual save afterwards using the value smuggled out.
-    let orderIds: string[] | null = null;
-    setCards((prev) => {
-      const from = prev.findIndex((c) => c.id === sourceId);
-      console.log("[moveCard] updater", { from, prevIds: prev.map((c) => c.id) });
-      if (from === -1) return prev;
-      const next = [...prev];
-      const [moved] = next.splice(from, 1);
-      next.push(...blanks);
-      const idx = Math.max(0, Math.min(targetIndex, next.length));
-      next.splice(idx, 0, moved);
-      const repositioned = next.map((c, i) => ({ ...c, position: i }));
-      orderIds = repositioned.map((c) => c.id);
-      return repositioned;
-    });
-    const ids = orderIds;
-    console.log("[moveCard] orderIds", ids);
-    if (ids) startTransition(() => reorderBinder(binder.id, ids));
+    // Everything above is `await`-ed, so by now we're well outside the
+    // click handler's original synchronous run — React no longer
+    // guarantees setCards(updaterFn) invokes the updater in this same
+    // tick, which broke the "compute inside the updater, read the result
+    // right after" trick the crash fix relied on. Do the computation as a
+    // plain value instead and hand setCards the finished array directly.
+    const next = [...withoutSource, ...blanks];
+    const idx = Math.max(0, Math.min(targetIndex, next.length));
+    next.splice(idx, 0, moved);
+    const repositioned = next.map((c, i) => ({ ...c, position: i }));
+    setCards(repositioned);
+
+    const orderIds = repositioned.map((c) => c.id);
+    startTransition(() => reorderBinder(binder.id, orderIds));
   }
 
   function handleDropOnCard(targetId: string) {
