@@ -529,6 +529,10 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
 
   function moveCard(sourceId: string, targetIndex: number) {
     snapshot();
+    // Compute the new order inside the updater (must stay pure — no
+    // server-action calls there, that's what was crashing React's render),
+    // then fire the actual save afterwards using the value smuggled out.
+    let orderIds: string[] | null = null;
     setCards((prev) => {
       const from = prev.findIndex((c) => c.id === sourceId);
       if (from === -1) return prev;
@@ -537,12 +541,10 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       const idx = Math.max(0, Math.min(targetIndex, next.length));
       next.splice(idx, 0, moved);
       const repositioned = next.map((c, i) => ({ ...c, position: i }));
-      reorderBinder(
-        binder.id,
-        repositioned.map((c) => c.id)
-      );
+      orderIds = repositioned.map((c) => c.id);
       return repositioned;
     });
+    if (orderIds) reorderBinder(binder.id, orderIds);
   }
 
   function handleDropOnCard(targetId: string) {
