@@ -112,7 +112,7 @@ export function FinanceModal({
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="flex max-h-[85vh] max-w-md flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-display tracking-wide">
             <HandCoins className="h-5 w-5 text-primary" />
@@ -120,192 +120,194 @@ export function FinanceModal({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Preço da carta</Label>
-            <Input
-              inputMode="numeric"
-              placeholder="R$ 0,00"
-              value={finalPrice}
-              onChange={(e) => setFinalPrice(maskBRL(e.target.value))}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Comprador</Label>
-            <BuyerPicker
-              buyerId={buyerId}
-              buyerName={buyerName}
-              onChange={(b) => {
-                setBuyerId(b.id);
-                setBuyerName(b.name);
-              }}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Entrega</Label>
-            <Select value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v ?? "none")}>
-              <SelectTrigger className="w-full">
-                <SelectValue>{(v: string) => DELIVERY_LABEL[v] ?? v}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Não definido</SelectItem>
-                <SelectItem value="maos">Em mãos</SelectItem>
-                <SelectItem value="dominaria">Dominaria</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {deliveryMethod === "dominaria" && (
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <div className="space-y-1.5">
-              <Label className="text-primary">
-                Taxa do envelope de depósito da Dominaria (não entra no valor da carta)
-              </Label>
+              <Label>Preço da carta</Label>
               <Input
                 inputMode="numeric"
                 placeholder="R$ 0,00"
-                className="border-primary/40"
-                value={dominariaFee}
-                onChange={(e) => setDominariaFee(maskBRL(e.target.value))}
+                value={finalPrice}
+                onChange={(e) => setFinalPrice(maskBRL(e.target.value))}
               />
-
-              <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink">
-                <Switch checked={dominariaDeposited} onCheckedChange={setDominariaDeposited} />
-                Já depositei na Dominaria
-              </label>
-              {dominariaDeposited && (
-                <div className="mt-2 space-y-1.5">
-                  <Label>Data do depósito</Label>
-                  <Input
-                    type="date"
-                    value={dominariaDepositDate}
-                    onChange={(e) => setDominariaDepositDate(e.target.value)}
-                  />
-                </div>
-              )}
             </div>
-          )}
 
-          <div className="space-y-1.5">
-            <Label>Observações (opcional)</Label>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
-
-          <label className="flex items-center gap-2 text-sm font-semibold text-ink">
-            <Switch checked={markSold} onCheckedChange={setMarkSold} />
-            Marcar carta como vendida
-          </label>
-
-          {markSold && (
             <div className="space-y-1.5">
-              <Label>Data da venda</Label>
-              <Input type="date" value={soldDate} onChange={(e) => setSoldDate(e.target.value)} />
+              <Label>Comprador</Label>
+              <BuyerPicker
+                buyerId={buyerId}
+                buyerName={buyerName}
+                onChange={(b) => {
+                  setBuyerId(b.id);
+                  setBuyerName(b.name);
+                }}
+              />
             </div>
-          )}
 
-          <div className="rounded-xl border-2 border-ink/10 p-3">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Pagamento</Label>
-                <Select value={payStatus} onValueChange={(v) => v && setPayStatus(v as typeof payStatus)}>
-                  <SelectTrigger size="sm">
-                    <SelectValue>{(v: string) => PAY_LABEL[v] ?? v}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="aberto">Aberto</SelectItem>
-                    <SelectItem value="parcial">Parcial</SelectItem>
-                    <SelectItem value="pago">Pago</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {payStatus === "parcial" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Já pagou</Label>
-                  <Input
-                    inputMode="decimal"
-                    value={amountPaid}
-                    onChange={(e) => setAmountPaid(maskBRL(e.target.value))}
-                    placeholder="R$ 0,00"
-                  />
-                </div>
-              )}
-              {payStatus === "pago" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Data do pagamento</Label>
-                  <Input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
-                </div>
-              )}
+            <div className="space-y-1.5">
+              <Label>Entrega</Label>
+              <Select value={deliveryMethod} onValueChange={(v) => setDeliveryMethod(v ?? "none")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>{(v: string) => DELIVERY_LABEL[v] ?? v}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Não definido</SelectItem>
+                  <SelectItem value="maos">Em mãos</SelectItem>
+                  <SelectItem value="dominaria">Dominaria</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            {payStatus !== "pago" && (
-              <div className="mt-2 space-y-1.5">
-                <Label className="text-xs">Prazo pra pagar (opcional)</Label>
-                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-              </div>
-            )}
-          </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Leilão / lote (opcional)</Label>
-            <Input
-              value={auctionLabel}
-              onChange={(e) => setAuctionLabel(e.target.value)}
-              placeholder="ex.: Leilão 08/09"
-            />
-          </div>
-
-          <div className="rounded-xl border-2 border-ink/10 p-3">
-            <p className="text-sm font-semibold text-ink">Consignação (carta de terceiro)</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            {deliveryMethod === "dominaria" && (
               <div className="space-y-1.5">
-                <Label className="text-xs">Dono da carta</Label>
+                <Label className="text-primary">
+                  Taxa do envelope de depósito da Dominaria (não entra no valor da carta)
+                </Label>
                 <Input
-                  value={consignorName}
-                  onChange={(e) => setConsignorName(e.target.value)}
-                  placeholder="Nome"
+                  inputMode="numeric"
+                  placeholder="R$ 0,00"
+                  className="border-primary/40"
+                  value={dominariaFee}
+                  onChange={(e) => setDominariaFee(maskBRL(e.target.value))}
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Comissão Easy Cards (%)</Label>
-                <Input
-                  inputMode="decimal"
-                  value={commissionPct}
-                  onChange={(e) => setCommissionPct(e.target.value.replace(/[^0-9.,]/g, ""))}
-                  placeholder="15"
-                />
-              </div>
-            </div>
-            {consignorName && (
-              <>
+
                 <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink">
-                  <Switch checked={consignorPaid} onCheckedChange={setConsignorPaid} />
-                  Já repassei pro dono
+                  <Switch checked={dominariaDeposited} onCheckedChange={setDominariaDeposited} />
+                  Já depositei na Dominaria
                 </label>
-                {consignorPaid && (
+                {dominariaDeposited && (
                   <div className="mt-2 space-y-1.5">
-                    <Label className="text-xs">Data do repasse</Label>
+                    <Label>Data do depósito</Label>
                     <Input
                       type="date"
-                      value={consignorPaidDate}
-                      onChange={(e) => setConsignorPaidDate(e.target.value)}
+                      value={dominariaDepositDate}
+                      onChange={(e) => setDominariaDepositDate(e.target.value)}
                     />
                   </div>
                 )}
-              </>
+              </div>
             )}
+
+            <div className="space-y-1.5">
+              <Label>Observações (opcional)</Label>
+              <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+
+            <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+              <Switch checked={markSold} onCheckedChange={setMarkSold} />
+              Marcar carta como vendida
+            </label>
+
+            {markSold && (
+              <div className="space-y-1.5">
+                <Label>Data da venda</Label>
+                <Input type="date" value={soldDate} onChange={(e) => setSoldDate(e.target.value)} />
+              </div>
+            )}
+
+            <div className="rounded-xl border-2 border-ink/10 p-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Pagamento</Label>
+                  <Select value={payStatus} onValueChange={(v) => v && setPayStatus(v as typeof payStatus)}>
+                    <SelectTrigger size="sm">
+                      <SelectValue>{(v: string) => PAY_LABEL[v] ?? v}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aberto">Aberto</SelectItem>
+                      <SelectItem value="parcial">Parcial</SelectItem>
+                      <SelectItem value="pago">Pago</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {payStatus === "parcial" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Já pagou</Label>
+                    <Input
+                      inputMode="decimal"
+                      value={amountPaid}
+                      onChange={(e) => setAmountPaid(maskBRL(e.target.value))}
+                      placeholder="R$ 0,00"
+                    />
+                  </div>
+                )}
+                {payStatus === "pago" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Data do pagamento</Label>
+                    <Input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} />
+                  </div>
+                )}
+              </div>
+              {payStatus !== "pago" && (
+                <div className="mt-2 space-y-1.5">
+                  <Label className="text-xs">Prazo pra pagar (opcional)</Label>
+                  <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Leilão / lote (opcional)</Label>
+              <Input
+                value={auctionLabel}
+                onChange={(e) => setAuctionLabel(e.target.value)}
+                placeholder="ex.: Leilão 08/09"
+              />
+            </div>
+
+            <div className="rounded-xl border-2 border-ink/10 p-3">
+              <p className="text-sm font-semibold text-ink">Consignação (carta de terceiro)</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Dono da carta</Label>
+                  <Input
+                    value={consignorName}
+                    onChange={(e) => setConsignorName(e.target.value)}
+                    placeholder="Nome"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Comissão Easy Cards (%)</Label>
+                  <Input
+                    inputMode="decimal"
+                    value={commissionPct}
+                    onChange={(e) => setCommissionPct(e.target.value.replace(/[^0-9.,]/g, ""))}
+                    placeholder="15"
+                  />
+                </div>
+              </div>
+              {consignorName && (
+                <>
+                  <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-ink">
+                    <Switch checked={consignorPaid} onCheckedChange={setConsignorPaid} />
+                    Já repassei pro dono
+                  </label>
+                  {consignorPaid && (
+                    <div className="mt-2 space-y-1.5">
+                      <Label className="text-xs">Data do repasse</Label>
+                      <Input
+                        type="date"
+                        value={consignorPaidDate}
+                        onChange={(e) => setConsignorPaidDate(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Foto real da carta (condição)</Label>
+              <p className="text-[11px] text-ink-muted">
+                Aparece pro comprador em “Minhas cartas”. Mostra o estado de verdade, não a arte oficial.
+              </p>
+              <ImageUploadField value={photoUrl} onChange={setPhotoUrl} shape="square" />
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Foto real da carta (condição)</Label>
-            <p className="text-[11px] text-ink-muted">
-              Aparece pro comprador em “Minhas cartas”. Mostra o estado de verdade, não a arte oficial.
-            </p>
-            <ImageUploadField value={photoUrl} onChange={setPhotoUrl} shape="square" />
-          </div>
+          {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <Button type="submit" disabled={saving} className="w-full">
+          <Button type="submit" disabled={saving} className="mt-3 w-full shrink-0">
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             Salvar
           </Button>
