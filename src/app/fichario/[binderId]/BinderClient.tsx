@@ -569,10 +569,12 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       try {
         const { ids } = await addBlankSlots(binder.id, gapsNeeded);
         blanks = ids.map(makeBlankCard);
-      } catch {
+      } catch (e) {
+        console.error("[moveCard] addBlankSlots failed", e);
         return;
       }
     }
+    console.log("[moveCard] proceeding", { sourceId, targetIndex, gapsNeeded, blankIds: blanks.map((b) => b.id) });
 
     // Compute the new order inside the updater (must stay pure — no
     // server-action calls there, that's what was crashing React's render),
@@ -580,6 +582,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     let orderIds: string[] | null = null;
     setCards((prev) => {
       const from = prev.findIndex((c) => c.id === sourceId);
+      console.log("[moveCard] updater", { from, prevIds: prev.map((c) => c.id) });
       if (from === -1) return prev;
       const next = [...prev];
       const [moved] = next.splice(from, 1);
@@ -591,6 +594,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       return repositioned;
     });
     const ids = orderIds;
+    console.log("[moveCard] orderIds", ids);
     if (ids) startTransition(() => reorderBinder(binder.id, ids));
   }
 
