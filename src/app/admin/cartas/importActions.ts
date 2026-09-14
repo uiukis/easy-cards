@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getEffectivePermissions } from "@/lib/get-permissions";
+import { sendPushToUsers } from "@/lib/push";
 
 async function requireCards() {
   const supabase = await createClient();
@@ -93,17 +94,25 @@ export async function importAuctionRows(
   // wishlist pings — best effort, don't fail the import over them
   for (const r of rows) {
     if (!r.card.name) continue;
-    await supabase
-      .rpc("notify_wishlist_match", {
+    try {
+      const { data: matched } = await supabase.rpc("notify_wishlist_match", {
         p_name: r.card.name,
         p_card_number: r.card.card_number || "",
         p_tcg_api_id: r.card.tcg_api_id || "",
         p_image_url: r.card.image_url || "",
-      })
-      .then(
-        () => {},
-        () => {}
-      );
+      });
+      const matchedIds = (matched ?? []).map((m: { user_id: string }) => m.user_id);
+      if (matchedIds.length > 0) {
+        await sendPushToUsers(matchedIds, {
+          title: "Apareceu uma carta da sua lista!",
+          body: `${r.card.name} entrou no catálogo da Easy Cards.`,
+          url: "/lista-de-desejos",
+          icon: r.card.image_url || "/icon-192.png",
+        });
+      }
+    } catch {
+      // best effort
+    }
   }
 
   revalidatePath("/admin/cartas");

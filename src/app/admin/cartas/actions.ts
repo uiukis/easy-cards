@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { sendPushToUsers } from "@/lib/push";
 import type { Card } from "@/lib/supabase/types";
 
 export type CardInput = {
@@ -40,12 +41,21 @@ export async function createCard(input: CardInput) {
 
   if (error) throw new Error(error.message);
 
-  await supabase.rpc("notify_wishlist_match", {
+  const { data: matched } = await supabase.rpc("notify_wishlist_match", {
     p_name: input.name,
     p_card_number: input.card_number || "",
     p_tcg_api_id: input.tcg_api_id || "",
     p_image_url: input.image_url || "",
   });
+  const matchedIds = (matched ?? []).map((m: { user_id: string }) => m.user_id);
+  if (matchedIds.length > 0) {
+    await sendPushToUsers(matchedIds, {
+      title: "Apareceu uma carta da sua lista!",
+      body: `${input.name} entrou no catálogo da Easy Cards.`,
+      url: "/lista-de-desejos",
+      icon: input.image_url || "/icon-192.png",
+    });
+  }
 
   revalidatePath("/admin/cartas");
 }
@@ -108,12 +118,21 @@ export async function createManyCards(cards: BulkCardInput[]) {
   if (error) throw new Error(error.message);
 
   for (const c of cards) {
-    await supabase.rpc("notify_wishlist_match", {
+    const { data: matched } = await supabase.rpc("notify_wishlist_match", {
       p_name: c.name,
       p_card_number: c.card_number || "",
       p_tcg_api_id: c.tcg_api_id || "",
       p_image_url: c.image_url || "",
     });
+    const matchedIds = (matched ?? []).map((m: { user_id: string }) => m.user_id);
+    if (matchedIds.length > 0) {
+      await sendPushToUsers(matchedIds, {
+        title: "Apareceu uma carta da sua lista!",
+        body: `${c.name} entrou no catálogo da Easy Cards.`,
+        url: "/lista-de-desejos",
+        icon: c.image_url || "/icon-192.png",
+      });
+    }
   }
 
   revalidatePath("/admin/cartas");

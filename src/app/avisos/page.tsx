@@ -4,6 +4,7 @@ import { Bell, Sparkles, ShieldCheck, CircleDollarSign, Heart } from "lucide-rea
 import { createClient } from "@/lib/supabase/server";
 import type { Notification } from "@/lib/supabase/types";
 import { CustomerNav } from "@/components/CustomerNav";
+import { EnablePushButton } from "@/components/EnablePushButton";
 import { MarkAllRead } from "./MarkAllRead";
 
 const ICON: Record<Notification["kind"], typeof Bell> = {
@@ -49,6 +50,10 @@ export default async function AvisosPage() {
             AVISOS
           </h1>
           {unread > 0 && <MarkAllRead />}
+        </div>
+
+        <div className="mt-4 max-w-xs">
+          <EnablePushButton />
         </div>
 
         {items.length === 0 ? (

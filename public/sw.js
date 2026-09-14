@@ -1,6 +1,7 @@
-// Minimal service worker: makes the site installable and gives a friendly
-// offline page. Network-first for navigations, cache-first for static assets.
-const VERSION = "ec-v4";
+// Minimal service worker: makes the site installable, gives a friendly
+// offline page, and shows Web Push notifications.
+// Network-first for navigations, cache-first for static assets.
+const VERSION = "ec-v5";
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -46,4 +47,34 @@ self.addEventListener("fetch", (event) => {
       })
     );
   }
+});
+
+self.addEventListener("push", (event) => {
+  let payload = {};
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { title: "Easy Cards", body: event.data ? event.data.text() : "" };
+  }
+  const title = payload.title || "Easy Cards";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: payload.body || "",
+      icon: payload.icon || "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url: payload.url || "/" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = event.notification.data && event.notification.data.url ? event.notification.data.url : "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientsArr) => {
+      const existing = clientsArr.find((c) => new URL(c.url).pathname === url);
+      if (existing) return existing.focus();
+      return self.clients.openWindow(url);
+    })
+  );
 });

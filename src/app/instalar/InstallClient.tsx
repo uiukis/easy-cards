@@ -14,7 +14,9 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { EnablePushButton } from "@/components/EnablePushButton";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -39,7 +41,7 @@ const BENEFITS = [
   { icon: Smartphone, text: "Fica na tela inicial, do lado dos outros apps" },
 ];
 
-export function InstallClient() {
+export function InstallClient({ loggedIn }: { loggedIn: boolean }) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(false);
   const [ready, setReady] = useState(false);
@@ -200,6 +202,24 @@ export function InstallClient() {
           </li>
         ))}
       </ul>
+
+      <div className="mt-8 border-t-2 border-dashed border-ink/10 pt-8">
+        <p className="text-xs font-bold uppercase tracking-wide text-ink-muted">
+          Quer o aviso na hora?
+        </p>
+        {loggedIn ? (
+          <div className="mt-3">
+            <EnablePushButton />
+          </div>
+        ) : (
+          <p className="mt-2 text-sm text-ink-muted">
+            <Link href="/login?next=/instalar" className="font-bold text-orange-deep">
+              Entra na sua conta
+            </Link>{" "}
+            pra ativar notificação de carta da lista de desejo.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
