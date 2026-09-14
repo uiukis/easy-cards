@@ -167,6 +167,7 @@ export type BinderCard = {
   rarity: string | null;
   types: string | null;
   is_image: boolean;
+  is_blank: boolean;
   want: boolean;
   created_at: string;
 };

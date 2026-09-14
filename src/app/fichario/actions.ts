@@ -247,6 +247,37 @@ export async function reorderBinder(binderId: string, orderedIds: string[]) {
   revalidatePath("/fichario");
 }
 
+/** Real empty pockets, so a card can be dropped past existing cards and
+ *  leave a genuine gap instead of always snapping back to "right after the
+ *  last real card". `reorderBinder` positions them afterwards like any
+ *  other row. */
+export async function addBlankSlots(binderId: string, count: number) {
+  if (count <= 0) return { ids: [] as string[] };
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado.");
+
+  const { data, error } = await supabase
+    .from("binder_cards")
+    .insert(
+      Array.from({ length: count }, () => ({
+        user_id: user.id,
+        binder_id: binderId,
+        name: "",
+        image_url: "",
+        is_blank: true,
+        position: 0,
+      }))
+    )
+    .select("id");
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/fichario");
+  return { ids: (data ?? []).map((r) => r.id as string) };
+}
+
 export async function addToBinder(
   binderId: string,
   input: {

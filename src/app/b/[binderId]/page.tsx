@@ -100,8 +100,8 @@ export default async function SharedBinderPage({
   const pages = chunk(allCards, cols * rows);
   const pageLabels: Record<string, string> = binder.page_labels ?? {};
   const pageBackgrounds: Record<string, string> = binder.page_backgrounds ?? {};
-  const haveCount = allCards.filter((c) => !c.want && !c.is_image).length;
-  const wantCount = allCards.filter((c) => c.want && !c.is_image).length;
+  const haveCount = allCards.filter((c) => !c.want && !c.is_image && !c.is_blank).length;
+  const wantCount = allCards.filter((c) => c.want && !c.is_image && !c.is_blank).length;
 
   return (
     <main className="bg-halftone min-h-screen bg-bg px-5 py-10 sm:px-8">
@@ -154,7 +154,10 @@ export default async function SharedBinderPage({
                   ? { label: "Do set", value: `${haveCount}/${binder.set_total}` }
                   : { label: "Cartas", value: haveCount },
                 { label: "Quero", value: wantCount },
-                { label: "Imagens", value: allCards.filter((c) => c.is_image).length },
+                {
+                  label: "Imagens",
+                  value: allCards.filter((c) => c.is_image && !c.is_blank).length,
+                },
                 binder.set_total
                   ? {
                       label: "Completo",
@@ -202,42 +205,49 @@ export default async function SharedBinderPage({
                   style={pageBgStyle(pageBackgrounds[String(pi)])}
                   className={`grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8`}
                 >
-                  {pc.map((card) => (
-                    <div
-                      key={card.id}
-                      style={{
-                        ...(card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : {}),
-                        ...(card.span_rows > 1 ? { gridRow: `span ${card.span_rows}` } : {}),
-                      }}
-                      className={`relative aspect-[5/7] overflow-hidden rounded-lg border-2 bg-bg shadow-sm ${
-                        card.want && !card.is_image
-                          ? "border-dashed border-orange/70"
-                          : "border-ink/10"
-                      }`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
-                      <img
-                        src={card.image_url}
-                        alt={card.name}
-                        className={`h-full w-full object-cover ${
-                          card.want && !card.is_image ? "opacity-45 saturate-50" : ""
-                        }`}
+                  {pc.map((card) =>
+                    card.is_blank ? (
+                      <div
+                        key={card.id}
+                        className="aspect-[5/7] rounded-lg border-2 border-dashed border-ink/10"
                       />
-                      {!card.is_image && holoKind(card.variant) && (
-                        <HoloShine kind={holoKind(card.variant)!} />
-                      )}
-                      {card.want && !card.is_image && (
-                        <span className="absolute left-0 top-2 bg-orange-deep px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                          Quero
-                        </span>
-                      )}
-                      {card.variant && VARIANT_ABBR[card.variant] && (
-                        <span className="absolute bottom-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">
-                          {VARIANT_ABBR[card.variant]}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    ) : (
+                      <div
+                        key={card.id}
+                        style={{
+                          ...(card.span_cols > 1 ? { gridColumn: `span ${card.span_cols}` } : {}),
+                          ...(card.span_rows > 1 ? { gridRow: `span ${card.span_rows}` } : {}),
+                        }}
+                        className={`relative aspect-[5/7] overflow-hidden rounded-lg border-2 bg-bg shadow-sm ${
+                          card.want && !card.is_image
+                            ? "border-dashed border-orange/70"
+                            : "border-ink/10"
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
+                        <img
+                          src={card.image_url}
+                          alt={card.name}
+                          className={`h-full w-full object-cover ${
+                            card.want && !card.is_image ? "opacity-45 saturate-50" : ""
+                          }`}
+                        />
+                        {!card.is_image && holoKind(card.variant) && (
+                          <HoloShine kind={holoKind(card.variant)!} />
+                        )}
+                        {card.want && !card.is_image && (
+                          <span className="absolute left-0 top-2 bg-orange-deep px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                            Quero
+                          </span>
+                        )}
+                        {card.variant && VARIANT_ABBR[card.variant] && (
+                          <span className="absolute bottom-1 right-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-bold text-white backdrop-blur-sm">
+                            {VARIANT_ABBR[card.variant]}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             ))}

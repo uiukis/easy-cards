@@ -77,11 +77,13 @@ async function loadBinders(userId: string): Promise<PublicBinder[]> {
   const ids = binders.map((b) => b.id);
   const { data: cards } = await supabase
     .from("binder_cards")
-    .select("binder_id, want, is_image")
+    .select("binder_id, want, is_image, is_blank")
     .in("binder_id", ids);
 
   return binders.map((b) => {
-    const rows = (cards ?? []).filter((c) => c.binder_id === b.id && !c.is_image);
+    const rows = (cards ?? []).filter(
+      (c) => c.binder_id === b.id && !c.is_image && !c.is_blank
+    );
     return {
       id: b.id,
       name: b.name,

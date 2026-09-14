@@ -51,6 +51,7 @@ function holoKind(variant: string | null): "holo" | "reverse" | "special" | null
 import {
   addManyToBinder,
   addImageSlot,
+  addBlankSlots,
   removeFromBinder,
   updateGridSize,
   renameBinder,
@@ -222,11 +223,11 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   const totalPages = pages.length;
   const safePage = Math.min(page, totalPages - 1);
 
-  const wantCount = cards.filter((c) => c.want && !c.is_image).length;
-  const imageCount = cards.filter((c) => c.is_image).length;
+  const wantCount = cards.filter((c) => c.want && !c.is_image && !c.is_blank).length;
+  const imageCount = cards.filter((c) => c.is_image && !c.is_blank).length;
   const coverStats = {
-    total: cards.length,
-    have: cards.filter((c) => !c.want && !c.is_image).length,
+    total: cards.filter((c) => !c.is_blank).length,
+    have: cards.filter((c) => !c.want && !c.is_image && !c.is_blank).length,
     want: wantCount,
     images: imageCount,
     pages: totalPages,
@@ -458,6 +459,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         rarity: c.rarity ?? null,
         types: c.types ?? null,
         is_image: false,
+        is_blank: false,
         want: false,
         created_at: new Date().toISOString(),
       }));
@@ -501,6 +503,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
         rarity: null,
         types: null,
         is_image: true,
+        is_blank: false,
         want: false,
         created_at: new Date().toISOString(),
       };
@@ -529,8 +532,48 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     setRemovingId(null);
   }
 
-  function moveCard(sourceId: string, targetIndex: number) {
+  function makeBlankCard(id: string): BinderCard {
+    return {
+      id,
+      user_id: binder.user_id,
+      binder_id: binder.id,
+      tcg_api_id: null,
+      name: "",
+      set_name: null,
+      card_number: null,
+      image_url: "",
+      position: 0,
+      variant: null,
+      span_cols: 1,
+      span_rows: 1,
+      rarity: null,
+      types: null,
+      is_image: false,
+      is_blank: true,
+      want: false,
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  // Moves a card to an absolute slot index. When that index falls past every
+  // card we currently have, real "blank" rows get created first to hold the
+  // gap open — otherwise the target silently clamped back to "right after
+  // the last card", so dragging something to a later empty pocket (leaving
+  // one open before it) just snapped back where it started.
+  async function moveCard(sourceId: string, targetIndex: number) {
     snapshot();
+    const withoutSource = cards.filter((c) => c.id !== sourceId);
+    const gapsNeeded = Math.max(0, targetIndex - withoutSource.length);
+    let blanks: BinderCard[] = [];
+    if (gapsNeeded > 0) {
+      try {
+        const { ids } = await addBlankSlots(binder.id, gapsNeeded);
+        blanks = ids.map(makeBlankCard);
+      } catch {
+        return;
+      }
+    }
+
     // Compute the new order inside the updater (must stay pure — no
     // server-action calls there, that's what was crashing React's render),
     // then fire the actual save afterwards using the value smuggled out.
@@ -540,6 +583,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       if (from === -1) return prev;
       const next = [...prev];
       const [moved] = next.splice(from, 1);
+      next.push(...blanks);
       const idx = Math.max(0, Math.min(targetIndex, next.length));
       next.splice(idx, 0, moved);
       const repositioned = next.map((c, i) => ({ ...c, position: i }));
@@ -560,30 +604,45 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     // drop the card into the target slot; the rest shift to make room.
     // splicing the source out first means inserting at `to` lands the card
     // after the target when dragging down, and before it when dragging up.
-    moveCard(sourceId, to);
+    // (works the same whether the target is a real card or an existing
+    // blank pocket — a blank is just a row like any other.)
+    void moveCard(sourceId, to);
   }
 
-  function handleDropOnEmpty(pageIndex: number) {
+  // `emptyIndex` is which trailing empty pocket on the page was targeted —
+  // 0 is the very next one, 1 the one after that, etc. `emptyIndex === 0`
+  // is treated as a plain "send to the end" (the overwhelmingly common
+  // drag) and never opens a gap, even when the moved card used to sit
+  // earlier on this same page. Anything past 0 means the pockets before it
+  // were deliberately skipped, so those become real blank rows.
+  function emptyTargetIndex(sourceId: string, pageIndex: number, emptyIndex: number) {
+    const pc = pages[pageIndex] ?? [];
+    if (emptyIndex === 0) {
+      const withoutSourceOnPage = pc.filter((c) => c.id !== sourceId).length;
+      return pageIndex * cardsPerPage + withoutSourceOnPage;
+    }
+    return pageIndex * cardsPerPage + pc.length + emptyIndex;
+  }
+
+  function handleDropOnEmpty(pageIndex: number, emptyIndex: number) {
     const sourceId = draggedId;
     setDraggedId(null);
     setDragOverId(null);
     if (!sourceId) return;
-    const pc = pages[pageIndex] ?? [];
-    moveCard(sourceId, pageIndex * cardsPerPage + pc.length);
+    void moveCard(sourceId, emptyTargetIndex(sourceId, pageIndex, emptyIndex));
   }
 
   // Tap-to-move — the touch-friendly path (native drag doesn't fire on phones).
-  function placePicked(targetCardId: string | null, pageIndex: number) {
+  function placePicked(targetCardId: string | null, pageIndex: number, emptyIndex = 0) {
     const src = pickedId;
     if (!src) return;
     setPickedId(null);
     if (targetCardId === src) return;
     if (targetCardId) {
       const to = cards.findIndex((c) => c.id === targetCardId);
-      if (to !== -1) moveCard(src, to);
+      if (to !== -1) void moveCard(src, to);
     } else {
-      const pc = pages[pageIndex] ?? [];
-      moveCard(src, pageIndex * cardsPerPage + pc.length);
+      void moveCard(src, emptyTargetIndex(src, pageIndex, emptyIndex));
     }
   }
 
@@ -789,7 +848,63 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
           }
           className={`grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8 print:hidden`}
         >
-          {pc.map((card) => (
+          {pc.map((card) =>
+            card.is_blank ? (
+              <div
+                key={card.id}
+                onDragOver={(e) => {
+                  if (!draggedId) return;
+                  e.preventDefault();
+                  setDragOverId(card.id);
+                }}
+                onDragLeave={() => setDragOverId((cur) => (cur === card.id ? null : cur))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDropOnCard(card.id);
+                }}
+                onClick={() => pickedId && placePicked(card.id, pageIndex)}
+                className={`group/slot relative flex aspect-[5/7] items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+                  dragOverId === card.id || pickedId
+                    ? "border-orange-deep bg-orange/10 cursor-pointer"
+                    : "border-ink/10"
+                }`}
+              >
+                {pickedId ? (
+                  <span className="px-2 text-center text-[10px] font-bold text-orange-deep">
+                    espaço vazio — toque pra soltar aqui
+                  </span>
+                ) : (
+                  <div className="flex flex-col items-center gap-1 opacity-0 transition-opacity group-hover/slot:opacity-100">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearchOpen(true);
+                      }}
+                      className="rounded-full bg-orange-deep px-2.5 py-1 text-[10px] font-bold text-white"
+                    >
+                      + Carta
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemove(card.id);
+                      }}
+                      disabled={removingId === card.id}
+                      aria-label="Tirar esse espaço vazio"
+                      title="Tirar esse espaço vazio"
+                      className="flex items-center gap-1 rounded-full border-2 border-ink/15 bg-surface px-2.5 py-1 text-[10px] font-bold text-ink hover:bg-surface-alt"
+                    >
+                      {removingId === card.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
+                      espaço
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
             <div
               key={card.id}
               draggable={!selectMode}
@@ -986,7 +1101,8 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                 );
               })()}
             </div>
-          ))}
+            )
+          )}
 
           {Array.from({ length: empties }).map((_, i) => {
             const slotKey = `p${pageIndex}-empty-${i}`;
@@ -1002,16 +1118,16 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                 onDragLeave={() => setDragOverId((cur) => (cur === slotKey ? null : cur))}
                 onDrop={(e) => {
                   e.preventDefault();
-                  handleDropOnEmpty(pageIndex);
+                  handleDropOnEmpty(pageIndex, i);
                 }}
-                onClick={() => pickedId && firstEmpty && placePicked(null, pageIndex)}
+                onClick={() => pickedId && placePicked(null, pageIndex, i)}
                 className={`group/slot relative flex aspect-[5/7] items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
-                  dragOverId === slotKey || (pickedId && firstEmpty)
+                  dragOverId === slotKey || pickedId
                     ? "border-orange-deep bg-orange/10"
                     : "border-ink/10"
-                } ${pickedId && firstEmpty ? "cursor-pointer" : ""}`}
+                } ${pickedId ? "cursor-pointer" : ""}`}
               >
-                {pickedId && firstEmpty ? (
+                {pickedId ? (
                   <span className="px-2 text-center text-[10px] font-bold text-orange-deep">
                     toque pra soltar aqui
                   </span>
@@ -1377,27 +1493,34 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
                       : undefined
                   }
                 >
-                  {pc.map((card) => (
-                  <div
-                    key={card.id}
-                    style={slotSpanStyle(card)}
-                    className={`relative aspect-[5/7] overflow-hidden rounded-lg border border-ink/20 ${
-                      card.want && !card.is_image ? "opacity-60" : ""
-                    }`}
-                  >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
-                      <img
-                        src={card.image_url}
-                        alt={card.name}
-                        className="h-full w-full object-cover"
+                  {pc.map((card) =>
+                    card.is_blank ? (
+                      <div
+                        key={card.id}
+                        className="aspect-[5/7] rounded-lg border border-dashed border-ink/15"
                       />
-                      {card.want && !card.is_image && (
-                        <span className="absolute left-0 top-1 bg-orange-deep px-1 text-[8px] font-bold uppercase text-white">
-                          Quero
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                    ) : (
+                      <div
+                        key={card.id}
+                        style={slotSpanStyle(card)}
+                        className={`relative aspect-[5/7] overflow-hidden rounded-lg border border-ink/20 ${
+                          card.want && !card.is_image ? "opacity-60" : ""
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- external card art URLs */}
+                        <img
+                          src={card.image_url}
+                          alt={card.name}
+                          className="h-full w-full object-cover"
+                        />
+                        {card.want && !card.is_image && (
+                          <span className="absolute left-0 top-1 bg-orange-deep px-1 text-[8px] font-bold uppercase text-white">
+                            Quero
+                          </span>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             ))}
