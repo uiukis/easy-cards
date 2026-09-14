@@ -13,6 +13,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/novidades",
     "/apoiador",
     "/fichario",
+    "/instalar",
   ].map((p) => ({
     url: `${BASE}${p}`,
     lastModified: new Date(),

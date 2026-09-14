@@ -12,4 +12,5 @@ export const SITE_NAV: SiteNavLink[] = [
   { href: "/novidades", label: "Novidades" },
   { href: "/cartas", label: "Cartas" },
   { href: "/fichario", label: "Fichário", beta: true },
+  { href: "/instalar", label: "Instalar app" },
 ];

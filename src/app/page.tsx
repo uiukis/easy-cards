@@ -5,6 +5,7 @@ import { About } from "@/components/About";
 import { EventsSection } from "@/components/EventsSection";
 import { AuctionsSection } from "@/components/AuctionsSection";
 import { ToolsSection } from "@/components/ToolsSection";
+import { InstallBanner } from "@/components/InstallBanner";
 import { CardOfWeekSection, type CardOfWeek } from "@/components/CardOfWeekSection";
 import { GradedShowcase } from "@/components/GradedShowcase";
 import { SupportSection } from "@/components/SupportSection";
@@ -73,6 +74,7 @@ export default async function Home() {
         <Hero />
         <About />
         <ToolsSection />
+        <InstallBanner />
         <CardOfWeekSection
           card={(cardOfWeek?.value ?? null) as CardOfWeek | null}
           stats={stats}
