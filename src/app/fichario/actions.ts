@@ -89,6 +89,7 @@ export type GuestBinderPayload = {
     rarity: string | null;
     types: string | null;
     is_image?: boolean;
+    is_blank?: boolean;
     want?: boolean;
   }[];
 };
@@ -138,6 +139,7 @@ export async function importGuestBinders(guests: GuestBinderPayload[]) {
         rarity: c.rarity,
         types: c.types,
         is_image: c.is_image ?? false,
+        is_blank: c.is_blank ?? false,
         want: c.want ?? false,
         position: i,
       }));

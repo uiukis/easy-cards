@@ -147,7 +147,10 @@ export function GuestFichario() {
                 {b.name.toUpperCase()}
               </p>
               <p className="text-xs text-ink-muted">
-                {b.cards.length} {b.cards.length === 1 ? "carta" : "cartas"}
+                {(() => {
+                  const n = b.cards.filter((c) => !c.is_blank).length;
+                  return `${n} ${n === 1 ? "carta" : "cartas"}`;
+                })()}
               </p>
               <span
                 onClick={(e) => {

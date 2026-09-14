@@ -53,6 +53,7 @@ export function BinderListClient({ initial }: { initial: BinderWithPreview[] }) 
             rarity: c.rarity,
             types: c.types,
             is_image: c.is_image ?? false,
+            is_blank: c.is_blank ?? false,
             want: c.want ?? false,
           })),
         }))

@@ -38,13 +38,13 @@ export default async function FicharioListPage() {
       .order("created_at", { ascending: false }),
     supabase
       .from("binder_cards")
-      .select("binder_id, image_url, position")
+      .select("binder_id, image_url, position, is_blank")
       .eq("user_id", user.id)
       .order("position", { ascending: true }),
   ]);
 
   const bindersWithPreview: BinderWithPreview[] = (binders ?? []).map((b) => {
-    const binderCards = (cards ?? []).filter((c) => c.binder_id === b.id);
+    const binderCards = (cards ?? []).filter((c) => c.binder_id === b.id && !c.is_blank);
     return {
       ...b,
       cardCount: binderCards.length,

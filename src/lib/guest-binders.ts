@@ -11,6 +11,7 @@ export type GuestCard = {
   rarity: string | null;
   types: string | null;
   is_image?: boolean;
+  is_blank?: boolean;
   want?: boolean;
   span_cols?: number;
   span_rows?: number;

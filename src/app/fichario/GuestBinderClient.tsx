@@ -68,6 +68,23 @@ function toGuestCard(r: SearchResult): GuestCard {
   };
 }
 
+function makeBlankCard(): GuestCard {
+  return {
+    id:
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `c_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    tcg_api_id: null,
+    name: "",
+    set_name: null,
+    card_number: null,
+    image_url: "",
+    rarity: null,
+    types: null,
+    is_blank: true,
+  };
+}
+
 export function GuestBinderClient({
   binder,
   onChange,
@@ -126,10 +143,10 @@ export function GuestBinderClient({
 
   const pageBackgrounds = binder.page_backgrounds ?? {};
   const coverStats = {
-    total: binder.cards.length,
-    have: binder.cards.filter((c) => !c.want && !c.is_image).length,
-    want: binder.cards.filter((c) => c.want && !c.is_image).length,
-    images: binder.cards.filter((c) => c.is_image).length,
+    total: binder.cards.filter((c) => !c.is_blank).length,
+    have: binder.cards.filter((c) => !c.want && !c.is_image && !c.is_blank).length,
+    want: binder.cards.filter((c) => c.want && !c.is_image && !c.is_blank).length,
+    images: binder.cards.filter((c) => c.is_image && !c.is_blank).length,
     pages: totalPages,
   };
 
@@ -218,12 +235,20 @@ export function GuestBinderClient({
     }
   }
 
+  // Moves a card to an absolute slot index. When that index falls past
+  // every card we currently have, blank filler entries get created first
+  // to hold the gap open — otherwise the target silently clamped back to
+  // "right after the last card", so dragging something to a later empty
+  // pocket (leaving one open before it) just snapped back where it started.
   function moveCard(sourceId: string, targetIndex: number) {
-    const from = binder.cards.findIndex((c) => c.id === sourceId);
-    if (from === -1) return;
-    const next = [...binder.cards];
-    const [moved] = next.splice(from, 1);
-    next.splice(Math.max(0, Math.min(targetIndex, next.length)), 0, moved);
+    const moved = binder.cards.find((c) => c.id === sourceId);
+    if (!moved) return;
+    const withoutSource = binder.cards.filter((c) => c.id !== sourceId);
+    const gapsNeeded = Math.max(0, targetIndex - withoutSource.length);
+    const blanks = Array.from({ length: gapsNeeded }, makeBlankCard);
+    const next = [...withoutSource, ...blanks];
+    const idx = Math.max(0, Math.min(targetIndex, next.length));
+    next.splice(idx, 0, moved);
     setCards(next);
   }
 
@@ -236,16 +261,30 @@ export function GuestBinderClient({
     if (to !== -1) moveCard(src, to);
   }
 
-  function handleDropOnEmpty() {
+  // `emptyIndex` is which trailing empty pocket on the page was targeted —
+  // 0 is the very next one, 1 the one after that, etc. `emptyIndex === 0`
+  // is treated as a plain "send to the end" and never opens a gap, even
+  // when the moved card used to sit earlier on this same page. Anything
+  // past 0 means the pockets before it were deliberately skipped, so those
+  // become real blank entries.
+  function emptyTargetIndex(sourceId: string, emptyIndex: number) {
+    if (emptyIndex === 0) {
+      const withoutSourceOnPage = pageCards.filter((c) => c.id !== sourceId).length;
+      return safePage * cardsPerPage + withoutSourceOnPage;
+    }
+    return safePage * cardsPerPage + pageCards.length + emptyIndex;
+  }
+
+  function handleDropOnEmpty(emptyIndex: number) {
     const src = draggedId;
     setDraggedId(null);
     setDragOverId(null);
     if (!src) return;
-    moveCard(src, safePage * cardsPerPage + pageCards.length);
+    moveCard(src, emptyTargetIndex(src, emptyIndex));
   }
 
   // Tap-to-move — the touch-friendly path (native drag doesn't fire on phones).
-  function placePicked(targetCardId: string | null) {
+  function placePicked(targetCardId: string | null, emptyIndex = 0) {
     const src = pickedId;
     if (!src) return;
     setPickedId(null);
@@ -254,7 +293,7 @@ export function GuestBinderClient({
       const to = binder.cards.findIndex((c) => c.id === targetCardId);
       if (to !== -1) moveCard(src, to);
     } else {
-      moveCard(src, safePage * cardsPerPage + pageCards.length);
+      moveCard(src, emptyTargetIndex(src, emptyIndex));
     }
   }
 
@@ -497,7 +536,58 @@ export function GuestBinderClient({
             }
             className={`grid ${COLS_CLASS[cols]} gap-3 rounded-[2rem] border-2 border-ink/10 bg-surface p-4 sm:gap-4 sm:p-8 print:hidden`}
           >
-            {pageCards.map((card) => (
+            {pageCards.map((card) =>
+              card.is_blank ? (
+                <div
+                  key={card.id}
+                  onDragOver={(e) => {
+                    if (!draggedId) return;
+                    e.preventDefault();
+                    setDragOverId(card.id);
+                  }}
+                  onDragLeave={() => setDragOverId((c) => (c === card.id ? null : c))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    handleDropOnCard(card.id);
+                  }}
+                  onClick={() => pickedId && placePicked(card.id)}
+                  className={`group/slot relative flex aspect-[5/7] items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+                    dragOverId === card.id || pickedId
+                      ? "border-orange-deep bg-orange/10 cursor-pointer"
+                      : "border-ink/10"
+                  }`}
+                >
+                  {pickedId ? (
+                    <span className="px-2 text-center text-[10px] font-bold text-orange-deep">
+                      espaço vazio — toque pra soltar aqui
+                    </span>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 opacity-0 transition-opacity group-hover/slot:opacity-100">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSearchOpen(true);
+                        }}
+                        className="rounded-full bg-orange-deep px-2.5 py-1 text-[10px] font-bold text-white"
+                      >
+                        + Carta
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemove(card.id);
+                        }}
+                        aria-label="Tirar esse espaço vazio"
+                        title="Tirar esse espaço vazio"
+                        className="flex items-center gap-1 rounded-full border-2 border-ink/15 bg-surface px-2.5 py-1 text-[10px] font-bold text-ink hover:bg-surface-alt"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        espaço
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
               <div
                 key={card.id}
                 draggable
@@ -627,7 +717,8 @@ export function GuestBinderClient({
                   );
                 })()}
               </div>
-            ))}
+              )
+            )}
 
             {Array.from({ length: emptySlots }).map((_, i) => (
               <div
@@ -640,16 +731,16 @@ export function GuestBinderClient({
                 onDragLeave={() => setDragOverId((c) => (c === `empty-${i}` ? null : c))}
                 onDrop={(e) => {
                   e.preventDefault();
-                  handleDropOnEmpty();
+                  handleDropOnEmpty(i);
                 }}
-                onClick={() => pickedId && i === 0 && placePicked(null)}
+                onClick={() => pickedId && placePicked(null, i)}
                 className={`group/slot relative flex aspect-[5/7] items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
-                  dragOverId === `empty-${i}` || (pickedId && i === 0)
+                  dragOverId === `empty-${i}` || pickedId
                     ? "border-orange-deep bg-orange/10"
                     : "border-ink/10"
-                } ${pickedId && i === 0 ? "cursor-pointer" : ""}`}
+                } ${pickedId ? "cursor-pointer" : ""}`}
               >
-                {pickedId && i === 0 ? (
+                {pickedId ? (
                   <span className="px-2 text-center text-[10px] font-bold text-orange-deep">
                     toque pra soltar aqui
                   </span>
@@ -685,7 +776,7 @@ export function GuestBinderClient({
           {binder.cards.length >= 3 && (
             <div className="mt-4 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-xl border-2 border-orange/30 bg-orange/10 px-3 py-2 text-center text-xs text-ink print:hidden">
               <span className="font-semibold text-orange-deep">
-                {binder.cards.length} cartas nesse fichário
+                {binder.cards.filter((c) => !c.is_blank).length} cartas nesse fichário
               </span>
               <span className="text-ink-muted">
                 — some se você limpar o navegador. Leva 30 segundos pra garantir.
@@ -740,26 +831,37 @@ export function GuestBinderClient({
                       : undefined
                   }
                 >
-                  {pc.map((card) => (
-                    <div
-                      key={card.id}
-                      style={{
-                        ...((card.span_cols ?? 1) > 1 ? { gridColumn: `span ${card.span_cols}` } : {}),
-                        ...((card.span_rows ?? 1) > 1 ? { gridRow: `span ${card.span_rows}` } : {}),
-                      }}
-                      className={`relative aspect-[5/7] overflow-hidden rounded-lg border border-ink/20 ${
-                        card.want && !card.is_image ? "opacity-60" : ""
-                      }`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element -- external card art */}
-                      <img src={card.image_url} alt={card.name} className="h-full w-full object-cover" />
-                      {card.want && !card.is_image && (
-                        <span className="absolute left-0 top-1 bg-orange-deep px-1 text-[8px] font-bold uppercase text-white">
-                          Quero
-                        </span>
-                      )}
-                    </div>
-                  ))}
+                  {pc.map((card) =>
+                    card.is_blank ? (
+                      <div
+                        key={card.id}
+                        className="aspect-[5/7] rounded-lg border border-dashed border-ink/15"
+                      />
+                    ) : (
+                      <div
+                        key={card.id}
+                        style={{
+                          ...((card.span_cols ?? 1) > 1 ? { gridColumn: `span ${card.span_cols}` } : {}),
+                          ...((card.span_rows ?? 1) > 1 ? { gridRow: `span ${card.span_rows}` } : {}),
+                        }}
+                        className={`relative aspect-[5/7] overflow-hidden rounded-lg border border-ink/20 ${
+                          card.want && !card.is_image ? "opacity-60" : ""
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- external card art */}
+                        <img
+                          src={card.image_url}
+                          alt={card.name}
+                          className="h-full w-full object-cover"
+                        />
+                        {card.want && !card.is_image && (
+                          <span className="absolute left-0 top-1 bg-orange-deep px-1 text-[8px] font-bold uppercase text-white">
+                            Quero
+                          </span>
+                        )}
+                      </div>
+                    )
+                  )}
                 </div>
               </div>
             ))}
