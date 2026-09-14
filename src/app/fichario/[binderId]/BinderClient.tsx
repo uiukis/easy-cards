@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { startTransition, useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
 import {
@@ -255,7 +255,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       for (const c of prev) if (!order.includes(c.id)) next.push(c);
       return next.map((c, i) => ({ ...c, position: i }));
     });
-    reorderBinder(binder.id, order);
+    startTransition(() => reorderBinder(binder.id, order));
   }
   function undo() {
     if (past.length === 0) return;
@@ -297,27 +297,27 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     else delete next[String(pageIndex)];
     setPageLabels(next);
     setEditingLabelPage(null);
-    updatePageLabels(binder.id, next);
+    startTransition(() => updatePageLabels(binder.id, next));
   }
 
   // --- cover --------------------------------------------------------------
   function enableCover() {
     setCoverEnabled(true);
     setShowCover(true);
-    updateBinderCover(binder.id, { enabled: true });
+    startTransition(() => updateBinderCover(binder.id, { enabled: true }));
   }
   function disableCover() {
     setCoverEnabled(false);
     setShowCover(false);
-    updateBinderCover(binder.id, { enabled: false });
+    startTransition(() => updateBinderCover(binder.id, { enabled: false }));
   }
   function handleCoverSubtitle(v: string) {
     setCoverSubtitle(v || null);
-    updateBinderCover(binder.id, { subtitle: v });
+    startTransition(() => updateBinderCover(binder.id, { subtitle: v }));
   }
   function handleCoverImage(url: string | null) {
     setCoverImageUrl(url);
-    updateBinderCover(binder.id, { imageUrl: url });
+    startTransition(() => updateBinderCover(binder.id, { imageUrl: url }));
   }
 
   // --- per-page background -----------------------------------------------
@@ -327,7 +327,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       const url = await uploadBinderImage(file);
       const next = { ...pageBackgrounds, [String(pageIndex)]: url };
       setPageBackgrounds(next);
-      updatePageBackgrounds(binder.id, next);
+      startTransition(() => updatePageBackgrounds(binder.id, next));
     } catch (e) {
       alert(e instanceof Error ? e.message : "Não deu pra enviar a imagem.");
     } finally {
@@ -338,14 +338,14 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     const next = { ...pageBackgrounds };
     delete next[String(pageIndex)];
     setPageBackgrounds(next);
-    updatePageBackgrounds(binder.id, next);
+    startTransition(() => updatePageBackgrounds(binder.id, next));
   }
 
   // --- tenho / quero -----------------------------------------------------
   function handleToggleWant(cardId: string, current: boolean) {
     const value = !current;
     setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, want: value } : c)));
-    updateCardWant(cardId, value);
+    startTransition(() => updateCardWant(cardId, value));
   }
 
   async function handleGridChange(size: string) {
@@ -399,9 +399,11 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       return 0;
     });
     setCards(sorted);
-    reorderBinder(
-      binder.id,
-      sorted.map((c) => c.id)
+    startTransition(() =>
+      reorderBinder(
+        binder.id,
+        sorted.map((c) => c.id)
+      )
     );
   }
 
@@ -544,7 +546,8 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       orderIds = repositioned.map((c) => c.id);
       return repositioned;
     });
-    if (orderIds) reorderBinder(binder.id, orderIds);
+    const ids = orderIds;
+    if (ids) startTransition(() => reorderBinder(binder.id, ids));
   }
 
   function handleDropOnCard(targetId: string) {
@@ -587,7 +590,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
   function handleVariantChange(cardId: string, variant: string) {
     const value = variant === "normal" ? null : variant;
     setCards((prev) => prev.map((c) => (c.id === cardId ? { ...c, variant: value } : c)));
-    updateCardVariant(cardId, value);
+    startTransition(() => updateCardVariant(cardId, value));
   }
 
   // cycle each slot 1×1 → 2×1 (largura) → 2×2 (toploader) → 1×1
@@ -603,7 +606,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     setCards((prev) =>
       prev.map((c) => (c.id === cardId ? { ...c, span_cols: nextC, span_rows: nextR } : c))
     );
-    updateCardSpan(cardId, nextC, nextR);
+    startTransition(() => updateCardSpan(cardId, nextC, nextR));
   }
 
   function slotSpanStyle(card: BinderCard): CSSProperties | undefined {
@@ -669,9 +672,11 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
     [newPages[swapFrom], newPages[pageIndex]] = [newPages[pageIndex], newPages[swapFrom]];
     const flat = newPages.flat();
     setCards(flat.map((c, i) => ({ ...c, position: i })));
-    reorderPages(
-      binder.id,
-      newPages.map((p) => p.map((c) => c.id))
+    startTransition(() =>
+      reorderPages(
+        binder.id,
+        newPages.map((p) => p.map((c) => c.id))
+      )
     );
     // the labels travel with their pages
     const a = String(swapFrom);
@@ -684,7 +689,7 @@ export function BinderClient({ binder, initial }: { binder: Binder; initial: Bin
       if (tmp) nextLabels[b] = tmp;
       else delete nextLabels[b];
       setPageLabels(nextLabels);
-      updatePageLabels(binder.id, nextLabels);
+      startTransition(() => updatePageLabels(binder.id, nextLabels));
     }
     setSwapFrom(null);
   }
